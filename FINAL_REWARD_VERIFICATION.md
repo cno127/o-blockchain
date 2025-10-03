@@ -27,7 +27,7 @@ namespace Rewards {
 
 ```cpp
 namespace StabilizationConfig {
-    static constexpr CAmount STABILIZATION_REWARD = 1;         // 1 O ✅
+    static constexpr CAmount STABILIZATION_REWARD = 100;         // 1 O ✅
     static constexpr int MAX_RECIPIENTS_PER_BLOCK = 100;       // Max 100 O per block
 }
 ```
@@ -40,8 +40,8 @@ namespace StabilizationConfig {
 
 ```cpp
 namespace ORewards {
-    static constexpr CAmount INITIAL_BLOCK_REWARD = 50;        // 50 O ✅
-    static constexpr CAmount POB_BLOCK_REWARD = 40;            // 40 O ✅
+    static constexpr CAmount INITIAL_BLOCK_REWARD = 500;        // 50 O ✅
+    static constexpr CAmount POB_BLOCK_REWARD = 400;            // 40 O ✅
     static constexpr CAmount MIN_TRANSACTION_FEE = 1;          // 1 O ✅
     static constexpr CAmount RECOMMENDED_FEE = 1;              // 1 O ✅
     static constexpr int HALVING_INTERVAL = 1051200;           // ~4 years

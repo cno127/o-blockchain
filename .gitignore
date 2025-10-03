@@ -66,3 +66,5 @@ test_*
 # Temporary files
 *.tmp
 temp/
+O_WEBSITE_REDESIGN_PROPOSAL.md
+o_website_prototype.html
