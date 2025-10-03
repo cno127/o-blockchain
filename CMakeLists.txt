@@ -1,4 +1,5 @@
-# Copyright (c) 2023-present The Bitcoin Core developers
+# Copyright (c) 2024-present The O Blockchain developers
+# Based on Bitcoin Core
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or https://opensource.org/license/mit/.
 
@@ -50,10 +51,10 @@ set(CMAKE_TRY_COMPILE_PLATFORM_VARIABLES
   CMAKE_CXX_LINK_EXECUTABLE
 )
 
-project(BitcoinCore
+project(OBlockchain
   VERSION ${CLIENT_VERSION_MAJOR}.${CLIENT_VERSION_MINOR}.${CLIENT_VERSION_BUILD}
-  DESCRIPTION "Bitcoin client software"
-  HOMEPAGE_URL "https://bitcoincore.org/"
+  DESCRIPTION "O Blockchain - Transactional stablecoin calibrated by water prices"
+  HOMEPAGE_URL "https://o.international/"
   LANGUAGES NONE
 )
 

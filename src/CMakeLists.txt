@@ -107,7 +107,15 @@ endif()
 add_library(bitcoin_consensus STATIC EXCLUDE_FROM_ALL
   arith_uint256.cpp
   consensus/merkle.cpp
+  consensus/o_pow_pob.cpp
+  consensus/stabilization_mining.cpp
+  consensus/stabilization_helpers.cpp
+  consensus/currency_exchange.cpp
+  consensus/currency_lifecycle.cpp
+  consensus/currency_disappearance_handling.cpp
+  consensus/brightid_integration.cpp
   consensus/tx_check.cpp
+  consensus/user_consensus.cpp
   hash.cpp
   primitives/block.cpp
   primitives/transaction.cpp
@@ -160,6 +168,8 @@ add_library(bitcoin_common STATIC EXCLUDE_FROM_ALL
   kernel/chainparams.cpp
   key.cpp
   key_io.cpp
+  measurement/measurement_system.cpp
+  measurement/measurement_helpers.cpp
   merkleblock.cpp
   net_permissions.cpp
   net_types.cpp
@@ -296,6 +306,12 @@ add_library(bitcoin_node STATIC EXCLUDE_FROM_ALL
   rpc/mining.cpp
   rpc/net.cpp
   rpc/node.cpp
+  rpc/o_measurement_rpc.cpp
+  rpc/o_pow_pob_rpc.cpp
+  rpc/o_stabilization_rpc.cpp
+  rpc/o_currency_exchange_rpc.cpp
+  rpc/o_currency_lifecycle_rpc.cpp
+  rpc/o_brightid_rpc.cpp
   rpc/output_script.cpp
   rpc/rawtransaction.cpp
   rpc/server.cpp

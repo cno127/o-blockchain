@@ -124,6 +124,9 @@ add_executable(test_bitcoin
   validation_tests.cpp
   validationinterface_tests.cpp
   versionbits_tests.cpp
+  simple_o_tests.cpp
+  user_consensus_tests.cpp
+  o_pow_pob_tests.cpp
 )
 
 include(TargetDataSources)

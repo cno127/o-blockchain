@@ -22,6 +22,14 @@ void RegisterRawTransactionRPCCommands(CRPCTable &tableRPC);
 void RegisterSignMessageRPCCommands(CRPCTable&);
 void RegisterSignerRPCCommands(CRPCTable &tableRPC);
 void RegisterTxoutProofRPCCommands(CRPCTable&);
+// O Blockchain RPC commands
+void RegisterOPowPobRPCCommands(CRPCTable &tableRPC);
+void RegisterOMeasurementRPCCommands(CRPCTable &tableRPC);
+void RegisterOStabilizationRPCCommands(CRPCTable &tableRPC);
+void RegisterOCurrencyExchangeRPCCommands(CRPCTable &tableRPC);
+void RegisterOCurrencyLifecycleRPCCommands(CRPCTable &tableRPC);
+void RegisterOBrightIDRPCCommands(CRPCTable &tableRPC);
+// void RegisterOBlockchainRPCCommands(CRPCTable &tableRPC);
 
 static inline void RegisterAllCoreRPCCommands(CRPCTable &t)
 {
@@ -38,6 +46,14 @@ static inline void RegisterAllCoreRPCCommands(CRPCTable &t)
     RegisterSignerRPCCommands(t);
 #endif // ENABLE_EXTERNAL_SIGNER
     RegisterTxoutProofRPCCommands(t);
+           // O Blockchain RPC commands
+           RegisterOPowPobRPCCommands(t);
+           RegisterOMeasurementRPCCommands(t);
+           RegisterOStabilizationRPCCommands(t);
+           RegisterOCurrencyExchangeRPCCommands(t);
+           RegisterOCurrencyLifecycleRPCCommands(t);
+           RegisterOBrightIDRPCCommands(t);
+           // RegisterOBlockchainRPCCommands(t);
 }
 
 #endif // BITCOIN_RPC_REGISTER_H

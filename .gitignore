@@ -1,28 +1,68 @@
-# Patterns that are specific to a text editor, IDE, operating system, or user
-# environment are not added here. They should be added to your local gitignore
-# file instead:
-# https://docs.github.com/en/get-started/git-basics/ignoring-files#configuring-ignored-files-for-all-repositories-on-your-computer
+# O Blockchain .gitignore
 
-# Build subdirectories.
-/*build*
-!/build-aux
-!/build_msvc
+# Build artifacts
+/build/
+/bin/
+/lib/
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
 
-*.pyc
+# Test artifacts
+test_network/
+*.log
+*.dat
+debug.log
 
-# Only ignore unexpected patches
-*.patch
-!contrib/guix/patches/*.patch
-!depends/patches/**/*.patch
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+compile_commands.json
 
-/CMakeUserPresets.json
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
 
-# Previous releases
-/releases
+# Compiled binaries
+bitcoind
+bitcoin-cli
+bitcoin-tx
+bitcoin-wallet
+bitcoin-util
+test_bitcoin
 
-# cargo default target dir
-target/
+# Dependencies
+depends/built/
+depends/sources/
+depends/work/
 
-/guix-build-*
+# macOS
+*.dSYM/
 
-/ci/scratch/
+# Coverage
+*.gcda
+*.gcno
+*.gcov
+coverage/
+
+# Backup files
+*.bak
+*.orig
+
+# Personal test files
+test_*.cpp
+test_*
+!test/
+
+# Temporary files
+*.tmp
+temp/
