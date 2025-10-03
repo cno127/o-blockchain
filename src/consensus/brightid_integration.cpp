@@ -351,7 +351,7 @@ bool BrightIDIntegration::VerifyCommunity(const std::string& brightid_address, c
 
 std::string BrightIDIntegration::GenerateAnonymousID(const std::string& brightid_address) const {
     // Generate a hash-based anonymous ID
-    CHashWriter hasher(0, 0);
+    HashWriter hasher{};
     hasher << brightid_address << m_context_id << "anonymous_salt";
     return hasher.GetHash().ToString();
 }
@@ -489,7 +489,7 @@ std::map<std::string, int64_t> BrightIDIntegration::GetPrivacyStatistics() const
 void BrightIDIntegration::SetVerificationRequirements(double min_trust_score, int min_connections, int64_t max_age) {
     m_min_trust_score = std::max(0.0, std::min(1.0, min_trust_score));
     m_min_connections = std::max(1, min_connections);
-    m_max_verification_age = std::max(86400L, max_age); // Minimum 1 day
+    m_max_verification_age = std::max(static_cast<int64_t>(86400), max_age); // Minimum 1 day
     
     LogPrintf("O BrightID: Updated verification requirements - Min trust: %.2f, Min connections: %d, Max age: %d\n",
               m_min_trust_score, m_min_connections, static_cast<int>(m_max_verification_age));
@@ -539,7 +539,7 @@ bool BrightIDIntegration::ValidateBrightIDAddress(const std::string& address) co
 
 std::string BrightIDIntegration::GenerateContextID() const {
     // Generate a unique context ID for this application
-    CHashWriter hasher(0, 0);
+    HashWriter hasher{};
     hasher << "O_Blockchain" << GetTime() << "BrightID_Context";
     return hasher.GetHash().ToString().substr(0, 16);
 }
@@ -659,7 +659,7 @@ bool BrightIDIntegration::ValidateVerificationData(const std::string& verificati
 }
 
 std::string BrightIDIntegration::HashBrightIDAddress(const std::string& address) const {
-    CHashWriter hasher(0, 0);
+    HashWriter hasher{};
     hasher << address;
     return hasher.GetHash().ToString();
 }
