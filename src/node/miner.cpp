@@ -14,6 +14,7 @@
 #include <consensus/merkle.h>
 #include <consensus/tx_verify.h>
 #include <consensus/validation.h>
+#include <consensus/stabilization_mining.h>
 #include <deploymentstatus.h>
 #include <logging.h>
 #include <node/context.h>
@@ -170,6 +171,20 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock()
     coinbaseTx.nLockTime = static_cast<uint32_t>(nHeight - 1);
     pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
     pblocktemplate->vchCoinbaseCommitment = m_chainstate.m_chainman.GenerateCoinbaseCommitment(*pblock, pindexPrev);
+
+    // O Blockchain: Add stabilization transactions if needed
+    if (OConsensus::ShouldTriggerStabilization(*pblock, nHeight)) {
+        auto stab_txs = OConsensus::g_stabilization_mining.CreateStabilizationTransactions(*pblock, nHeight);
+        
+        for (const auto& stab_tx : stab_txs) {
+            // Add stabilization transaction to block template
+            pblock->vtx.push_back(MakeTransactionRef(stab_tx));
+            nBlockTx++;
+        }
+        
+        LogPrintf("O Mining: Added %d stabilization transactions to block template at height %d\n",
+                  static_cast<int>(stab_txs.size()), nHeight);
+    }
 
     LogPrintf("CreateNewBlock(): block weight: %u txs: %u fees: %ld sigops %d\n", GetBlockWeight(*pblock), nBlockTx, nFees, nBlockSigOpsCost);
 

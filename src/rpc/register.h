@@ -27,6 +27,7 @@ void RegisterOPowPobRPCCommands(CRPCTable &tableRPC);
 void RegisterOMeasurementRPCCommands(CRPCTable &tableRPC);
 void RegisterOStabilizationRPCCommands(CRPCTable &tableRPC);
 void RegisterOCurrencyExchangeRPCCommands(CRPCTable &tableRPC);
+void RegisterOStabilizationIntegrationRPCCommands(CRPCTable &tableRPC);
 // void RegisterOCurrencyLifecycleRPCCommands(CRPCTable &tableRPC);  // Temporarily disabled
 // void RegisterOBrightIDRPCCommands(CRPCTable &tableRPC);  // Temporarily disabled
 // void RegisterOBlockchainRPCCommands(CRPCTable &tableRPC);
@@ -51,6 +52,7 @@ static inline void RegisterAllCoreRPCCommands(CRPCTable &t)
            RegisterOMeasurementRPCCommands(t);
            RegisterOStabilizationRPCCommands(t);
            RegisterOCurrencyExchangeRPCCommands(t);
+           RegisterOStabilizationIntegrationRPCCommands(t);
            // RegisterOCurrencyLifecycleRPCCommands(t);  // Temporarily disabled
            // RegisterOBrightIDRPCCommands(t);  // Temporarily disabled
            // RegisterOBlockchainRPCCommands(t);

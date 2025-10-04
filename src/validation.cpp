@@ -17,6 +17,9 @@
 #include <consensus/tx_check.h>
 #include <consensus/tx_verify.h>
 #include <consensus/validation.h>
+#include <consensus/stabilization_mining.h>
+#include <consensus/stabilization_coins.h>
+#include <consensus/stabilization_consensus.h>
 #include <cuckoocache.h>
 #include <flatfile.h>
 #include <hash.h>
@@ -2705,6 +2708,33 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
              nInputs <= 1 ? 0 : Ticks<MillisecondsDouble>(time_3 - time_2) / (nInputs - 1),
              Ticks<SecondsDouble>(m_chainman.time_connect),
              Ticks<MillisecondsDouble>(m_chainman.time_connect) / m_chainman.num_blocks_total);
+
+    // O Blockchain: Check for stabilization mining after processing all transactions
+    if (OConsensus::ShouldTriggerStabilization(block, pindex->nHeight)) {
+        auto stab_txs = OConsensus::g_stabilization_mining.CreateStabilizationTransactions(block, pindex->nHeight);
+        
+        // Process stabilization transactions using specialized coin manager
+        OConsensus::g_stabilization_coins_manager.UpdateCoinsWithStabilization(stab_txs, view, pindex->nHeight);
+        
+        // Also update standard coin database for compatibility
+        for (const auto& stab_tx : stab_txs) {
+            // Add to block undo data
+            blockundo.vtxundo.emplace_back();
+            CTxUndo& undo = blockundo.vtxundo.back();
+            
+            // Process stabilization transaction (no inputs, only outputs)
+            UpdateCoins(stab_tx, view, undo, pindex->nHeight);
+        }
+        
+        LogPrintf("O Stabilization: Created %d stabilization transactions at height %d\n",
+                  static_cast<int>(stab_txs.size()), pindex->nHeight);
+    }
+    
+    // O Blockchain: Validate stabilization consensus
+    if (!OConsensus::g_stabilization_consensus_validator.ValidateStabilizationTransactions(block, pindex->nHeight, state)) {
+        LogPrintf("O Stabilization: Consensus validation failed at height %d\n", pindex->nHeight);
+        return false;
+    }
 
     CAmount blockReward = nFees + GetBlockSubsidy(pindex->nHeight, params.GetConsensus());
     if (block.vtx[0]->GetValueOut() > blockReward && state.IsValid()) {
