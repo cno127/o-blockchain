@@ -4,6 +4,8 @@ Other options described below are also considered candidate for this project and
 - One fork per currency with Bitcoin Core: we keep the mono-currency structure of bitcoin core and create one fork per O currency, it requires lots of maintenance and cross-chain scripts but is an interesting model in terms of scalability since we divide the load of transactions per blockchain by volume per currency. 
 - Other frameworks/platforms: multi-currency ready, solution less flexible and more dependable but can be study to compare.
 
+All values used in this code (rewards, triggering delta, precision delta, time range…) are for reference and testing purposes and they haven’t been defined yet. Those values will be set at the final stage of testing.
+
 We welcome all feedback or suggestion as this is the very first draft and will certainly evolve quickly!
 Also feel free to contact me if you want to contribute to the project as everyone is welcomed to bring his ideas and suggestion.
 Thank you for your interest and support!
