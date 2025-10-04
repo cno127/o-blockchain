@@ -470,3 +470,14 @@ void CurrencyLifecycleManager::NotifyUsersOfReplacement(const std::string& old_c
     LogPrintf("O Currency Lifecycle: Notifying users of currency replacement %s -> %s\n",
               old_currency.c_str(), new_currency.c_str());
 }
+
+std::vector<CurrencyLifecycleInfo> CurrencyLifecycleManager::GetAllCurrencyInfo() const {
+    std::vector<CurrencyLifecycleInfo> result;
+    result.reserve(m_currency_lifecycle.size());
+    
+    for (const auto& pair : m_currency_lifecycle) {
+        result.push_back(pair.second);
+    }
+    
+    return result;
+}

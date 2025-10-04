@@ -232,6 +232,17 @@ bool ValidateStabilizationTransactions(const CBlock& block, int height);
 /** Calculate expected stabilization amount for block */
 CAmount CalculateExpectedStabilization(const CBlock& block, int height);
 
+/** O_ONLY Currency Stability Integration */
+
+/** Check if O_ONLY currency is unstable */
+bool IsOOnlyCurrencyUnstable(const std::string& currency);
+
+/** Get stabilization amount for O_ONLY currency */
+CAmount GetOOnlyStabilizationAmount(const std::string& currency);
+
+/** Get list of unstable O_ONLY currencies */
+std::vector<std::string> GetUnstableOOnlyCurrencies();
+
 } // namespace OConsensus
 
 #endif // BITCOIN_CONSENSUS_STABILIZATION_MINING_H

@@ -4,6 +4,8 @@
 
 #include <measurement/measurement_system.h>
 #include <consensus/user_consensus.h>
+#include <consensus/currency_lifecycle.h>
+#include <consensus/currency_disappearance_handling.h>
 #include <hash.h>
 #include <logging.h>
 #include <random.h>
@@ -777,6 +779,45 @@ int MeasurementSystem::CalculateInviteCountForTarget(int target_measurements, co
               target_measurements, conversion_rate * 100.0, invite_count);
     
     return invite_count;
+}
+
+// ===== O_ONLY Currency Measurement Processing =====
+
+void MeasurementSystem::ProcessOOnlyCurrencyMeasurement(const std::string& currency,
+                                                       double water_price_in_o_coin,
+                                                       int height) {
+    // Check if currency is O_ONLY
+    if (!g_currency_lifecycle_manager.IsOOnlyCurrency(currency)) {
+        LogPrintf("O Measurement: Currency %s is not O_ONLY, skipping O_ONLY measurement processing\n", 
+                  currency.c_str());
+        return;
+    }
+    
+    LogPrintf("O Measurement: Processing O_ONLY currency measurement for %s - Water price: %.3f O\n",
+              currency.c_str(), water_price_in_o_coin);
+    
+    // Create measurement record for O_ONLY currency
+    WaterPriceMeasurement measurement;
+    measurement.measurement_id = GetRandHash();
+    measurement.currency_code = currency;
+    measurement.price = static_cast<int64_t>(water_price_in_o_coin * 100); // Convert to cents (2 decimals)
+    measurement.location = "O_ONLY_MEASUREMENT";
+    measurement.timestamp = GetTime();
+    measurement.block_height = height;
+    measurement.is_validated = true; // O_ONLY measurements are auto-validated
+    measurement.confidence_score = 1.0; // Full confidence for O_ONLY measurements
+    
+    // Add to measurement system
+    m_water_prices[measurement.measurement_id] = measurement;
+    
+    // Update O_ONLY stability tracking
+    g_currency_disappearance_handler.UpdateOOnlyStability(currency, 
+                                                         water_price_in_o_coin, 
+                                                         1.0); // Exchange rate fixed at 1:1
+    
+    LogPrintf("O Measurement: O_ONLY currency %s measurement processed - "
+              "Water price: %.3f O, Exchange rate: 1.000 (fixed)\n",
+              currency.c_str(), water_price_in_o_coin);
 }
 
 } // namespace OMeasurement

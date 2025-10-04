@@ -273,6 +273,11 @@ public:
     std::optional<double> GetAverageExchangeRate(
         const std::string& from_currency, const std::string& to_currency, int days) const;
     
+    /** Process O_ONLY currency measurement (water price in O coin) */
+    void ProcessOOnlyCurrencyMeasurement(const std::string& currency,
+                                        double water_price_in_o_coin,
+                                        int height);
+    
     /** Calculate Gaussian average (excludes outliers) */
     double CalculateGaussianAverage(const std::vector<double>& values) const;
     

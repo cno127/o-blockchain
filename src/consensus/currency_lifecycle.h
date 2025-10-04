@@ -158,6 +158,9 @@ public:
     /** Get currencies requiring migration */
     std::vector<std::string> GetCurrenciesRequiringMigration(int height) const;
     
+    /** Get all currency information */
+    std::vector<CurrencyLifecycleInfo> GetAllCurrencyInfo() const;
+    
     /** Check if migration deadline passed */
     bool IsMigrationDeadlinePassed(const std::string& currency, int height) const;
     

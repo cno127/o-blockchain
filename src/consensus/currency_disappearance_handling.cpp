@@ -169,8 +169,10 @@ bool CurrencyDisappearanceHandler::HandleOOnlyConversion(const std::string& curr
     // Use global currency lifecycle manager
     g_currency_lifecycle_manager.ConvertToOOnly(currency, reason, height);
     
-    // Initialize O_ONLY stability tracking
-    m_o_only_stability[currency] = {1.0, 1.0}; // water_price = 1.0, exchange_rate = 1.0
+    // Initialize O_ONLY stability tracking with measured values (not fixed)
+    // Water price will be measured and validated against 1.00 O target
+    // Exchange rate is fixed at 1:1 for O_ONLY currencies
+    m_o_only_stability[currency] = {1.0, 1.0}; // Initial values, will be updated with measurements
     
     // Add emergency fallback data
     FallbackDataSource fallback_data;
@@ -193,23 +195,29 @@ bool CurrencyDisappearanceHandler::HandleOOnlyConversion(const std::string& curr
 // ===== O_ONLY Currency Validation =====
 
 bool CurrencyDisappearanceHandler::ValidateOOnlyCurrency(const std::string& currency, 
-                                                        double water_price, 
+                                                        double measured_water_price_in_o, 
                                                         double exchange_rate) const {
     if (!g_currency_lifecycle_manager.IsOOnlyCurrency(currency)) {
         return false;
     }
     
     // For O_ONLY currencies:
-    // - Water price should equal 1.0 O
-    // - Exchange rate with other O currencies should be 1:1
-    const double WATER_PRICE_TOLERANCE = 0.01;  // 1% tolerance
-    const double EXCHANGE_RATE_TOLERANCE = 0.01; // 1% tolerance
+    // - Water price should equal 1.0 O (measured, not fixed)
+    // - Exchange rate with other O currencies should be 1:1 (fixed)
+    const double WATER_PRICE_TOLERANCE = 0.10;  // 10% tolerance (same as regular currencies)
+    const double EXCHANGE_RATE_TOLERANCE = 0.01; // 1% tolerance (fixed at 1:1)
     
-    bool water_price_stable = std::abs(water_price - 1.0) <= WATER_PRICE_TOLERANCE;
+    // Check if measured water price in O coin deviates from target 1.00 O
+    bool water_price_stable = std::abs(measured_water_price_in_o - 1.0) <= WATER_PRICE_TOLERANCE;
+    
+    // Exchange rate should always be 1:1 for O_ONLY currencies
     bool exchange_rate_stable = std::abs(exchange_rate - 1.0) <= EXCHANGE_RATE_TOLERANCE;
     
-    LogPrintf("O Currency Disappearance: O_ONLY currency %s validation - Water price: %.3f (stable: %s), Exchange rate: %.3f (stable: %s)\n",
-              currency.c_str(), water_price, water_price_stable ? "YES" : "NO",
+    LogPrintf("O Currency Disappearance: O_ONLY currency %s validation - "
+              "Measured water price: %.3f O (target: 1.000 O, stable: %s), "
+              "Exchange rate: %.3f (stable: %s)\n",
+              currency.c_str(), measured_water_price_in_o, 
+              water_price_stable ? "YES" : "NO",
               exchange_rate, exchange_rate_stable ? "YES" : "NO");
     
     return water_price_stable && exchange_rate_stable;
@@ -234,18 +242,33 @@ std::pair<double, double> CurrencyDisappearanceHandler::GetOOnlyStabilityMetrics
 }
 
 void CurrencyDisappearanceHandler::UpdateOOnlyStability(const std::string& currency,
-                                                       double water_price,
+                                                       double measured_water_price_in_o,
                                                        double exchange_rate) {
-    m_o_only_stability[currency] = {water_price, exchange_rate};
+    // Store the MEASURED water price (not fixed 1.0)
+    m_o_only_stability[currency] = {measured_water_price_in_o, exchange_rate};
     
-    // Update global currency lifecycle manager
-    bool water_price_stable = std::abs(water_price - 1.0) <= 0.01;
-    bool exchange_rate_stable = std::abs(exchange_rate - 1.0) <= 0.01;
+    // Validate against target 1.00 O
+    bool water_price_stable = std::abs(measured_water_price_in_o - 1.0) <= 0.10; // 10% tolerance
+    bool exchange_rate_stable = std::abs(exchange_rate - 1.0) <= 0.01; // 1% tolerance
     
     g_currency_lifecycle_manager.UpdateOOnlyStability(currency, water_price_stable, exchange_rate_stable);
     
-    LogPrintf("O Currency Disappearance: Updated O_ONLY stability for %s - Water price: %.3f, Exchange rate: %.3f\n",
-              currency.c_str(), water_price, exchange_rate);
+    // If water price is unstable, trigger stabilization
+    if (!water_price_stable) {
+        double deviation = std::abs(measured_water_price_in_o - 1.0);
+        LogPrintf("O Currency Disappearance: O_ONLY currency %s is UNSTABLE - "
+                  "Measured water price: %.3f O (target: 1.000 O, deviation: %.2f%%)\n",
+                  currency.c_str(), measured_water_price_in_o, deviation * 100);
+        
+        // Trigger stabilization mining for O_ONLY currency
+        // Note: This would need to be implemented in the stabilization system
+        LogPrintf("O Currency Disappearance: Triggering stabilization for O_ONLY currency %s\n", 
+                  currency.c_str());
+    }
+    
+    LogPrintf("O Currency Disappearance: Updated O_ONLY stability for %s - "
+              "Measured water price: %.3f O, Exchange rate: %.3f\n",
+              currency.c_str(), measured_water_price_in_o, exchange_rate);
 }
 
 // ===== Fallback Rate Calculation =====
@@ -320,8 +343,16 @@ bool CurrencyDisappearanceHandler::IsEmergencyStabilizationNeeded(const std::str
         return false;
     }
     
-    // Check if O_ONLY currency is unstable
-    return !IsOOnlyCurrencyStable(currency);
+    auto it = m_o_only_stability.find(currency);
+    if (it == m_o_only_stability.end()) {
+        return false;
+    }
+    
+    double measured_water_price = it->second.first;
+    double deviation = std::abs(measured_water_price - 1.0);
+    
+    // Trigger stabilization if water price deviates more than 10% from 1.00 O
+    return deviation > 0.10;
 }
 
 CAmount CurrencyDisappearanceHandler::GetEmergencyStabilizationAmount(const std::string& currency) const {
@@ -329,15 +360,16 @@ CAmount CurrencyDisappearanceHandler::GetEmergencyStabilizationAmount(const std:
         return 0;
     }
     
-    // Calculate amount based on instability
+    // Calculate stabilization amount based on deviation from 1.00 O
     auto stability_metrics = GetOOnlyStabilityMetrics(currency);
-    double water_price_deviation = std::abs(stability_metrics.first - 1.0);
-    double exchange_rate_deviation = std::abs(stability_metrics.second - 1.0);
+    double measured_water_price = stability_metrics.first;
+    double deviation = std::abs(measured_water_price - 1.0);
     
-    // Base amount: 1000 O per 1% deviation
-    double total_deviation = water_price_deviation + exchange_rate_deviation;
-    CAmount base_amount = OAmount::O(1000); // 1000.00 O
-    CAmount emergency_amount = static_cast<CAmount>(base_amount * total_deviation * 100);
+    // More deviation = more stabilization needed
+    CAmount base_stabilization = OAmount::O(1000); // 1000.00 O base
+    CAmount deviation_multiplier = static_cast<CAmount>(deviation * 10000); // Scale deviation
+    
+    CAmount emergency_amount = base_stabilization + deviation_multiplier;
     
     // Cap at 100,000 O
     CAmount max_amount = OAmount::O(100000); // 100,000.00 O

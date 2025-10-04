@@ -3,6 +3,8 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <consensus/stabilization_mining.h>
+#include <consensus/currency_lifecycle.h>
+#include <consensus/currency_disappearance_handling.h>
 #include <measurement/measurement_system.h>
 #include <logging.h>
 #include <random.h>
@@ -375,6 +377,39 @@ bool ValidateStabilizationTransactions(const CBlock& block, int height) {
 
 CAmount CalculateExpectedStabilization(const CBlock& block, int height) {
     return g_stabilization_mining.CalculateStabilizationCoins(block, height);
+}
+
+// ===== O_ONLY Currency Stability Integration =====
+
+bool IsOOnlyCurrencyUnstable(const std::string& currency) {
+    if (!g_currency_lifecycle_manager.IsOOnlyCurrency(currency)) {
+        return false;
+    }
+    
+    // Check if O_ONLY currency needs emergency stabilization
+    return g_currency_disappearance_handler.IsEmergencyStabilizationNeeded(currency);
+}
+
+CAmount GetOOnlyStabilizationAmount(const std::string& currency) {
+    if (!IsOOnlyCurrencyUnstable(currency)) {
+        return 0;
+    }
+    
+    return g_currency_disappearance_handler.GetEmergencyStabilizationAmount(currency);
+}
+
+std::vector<std::string> GetUnstableOOnlyCurrencies() {
+    std::vector<std::string> unstable_currencies;
+    
+    // Get all O_ONLY currencies and check their stability
+    auto all_currencies = g_currency_lifecycle_manager.GetAllCurrencyInfo();
+    for (const auto& currency_info : all_currencies) {
+        if (currency_info.IsOOnly() && IsOOnlyCurrencyUnstable(currency_info.currency_code)) {
+            unstable_currencies.push_back(currency_info.currency_code);
+        }
+    }
+    
+    return unstable_currencies;
 }
 
 } // namespace OConsensus

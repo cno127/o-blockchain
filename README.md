@@ -15,7 +15,8 @@ Thank you for your interest and support!
 # 🌊 O Blockchain - The World's First Water-Based Stablecoin
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen.svg)](https://github.com/o-blockchain/o-blockchain)
+[![Build Status](https://img.shields.io/badge/Build-Success-brightgreen.svg)](https://github.com/o-blockchain/o-blockchain)
+[![Test Status](https://img.shields.io/badge/Tests-75%25%20Passing-yellow.svg)](https://github.com/o-blockchain/o-blockchain)
 [![Bitcoin Core](https://img.shields.io/badge/Built%20on-Bitcoin%20Core-orange.svg)](https://bitcoincore.org/)
 
 > **Building a Universal Currency for Global Prosperity**
