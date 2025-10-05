@@ -177,6 +177,7 @@ add_library(bitcoin_common STATIC EXCLUDE_FROM_ALL
   measurement/measurement_system.cpp
   measurement/measurement_helpers.cpp
   measurement/measurement_policy.cpp
+  measurement/volume_conversion.cpp
   merkleblock.cpp
   net_permissions.cpp
   net_types.cpp

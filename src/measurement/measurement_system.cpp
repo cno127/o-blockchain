@@ -3,6 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <measurement/measurement_system.h>
+#include <measurement/volume_conversion.h>
 #include <hash.h>
 #include <logging.h>
 #include <random.h>
@@ -74,14 +75,39 @@ uint256 MeasurementSystem::SubmitWaterPrice(const WaterPriceMeasurement& measure
         return uint256();
     }
     
-    m_water_prices[measurement.measurement_id] = measurement;
+    // CRITICAL: Validate volume and unit before accepting measurement
+    VolumeValidationResult volume_validation = ValidateWaterPriceVolume(
+        measurement.volume,
+        measurement.volume_unit,
+        measurement.price,
+        measurement.currency_code
+    );
+    
+    if (!volume_validation.is_valid) {
+        LogPrintf("O Measurement: Volume validation failed - %s (Volume: %.4f %s, Price: %lld)\n",
+                  volume_validation.error_message.c_str(),
+                  measurement.volume,
+                  measurement.volume_unit.c_str(),
+                  measurement.price);
+        return uint256();
+    }
+    
+    // Store measurement with validated price_per_liter
+    WaterPriceMeasurement validated_measurement = measurement;
+    validated_measurement.price_per_liter = static_cast<int64_t>(volume_validation.price_per_liter);
+    
+    m_water_prices[measurement.measurement_id] = validated_measurement;
     MarkInviteUsed(measurement.invite_id);
     
     m_stats.total_measurements_received++;
     m_stats.measurements_by_type[MeasurementType::WATER_PRICE]++;
     
-    LogDebug(BCLog::NET, "O Measurement: Water price submitted for %s: %d\n",
-             measurement.currency_code, measurement.price);
+    LogPrintf("O Measurement: Water price submitted - Currency: %s, Container: %lld for %.4f %s, Price/L: %lld\n",
+              measurement.currency_code.c_str(),
+              measurement.price,
+              measurement.volume,
+              measurement.volume_unit.c_str(),
+              validated_measurement.price_per_liter);
     
     // Trigger stability recalculation if we have enough measurements
     if (m_stats.total_measurements_received % 10 == 0) { // Every 10 measurements

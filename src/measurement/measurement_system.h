@@ -82,7 +82,10 @@ struct WaterPriceMeasurement {
     uint256 measurement_id;
     CPubKey submitter;
     std::string currency_code;       // USD, EUR, JPY, etc.
-    int64_t price;                   // Price in smallest unit (cents, etc.)
+    int64_t price;                   // Price in smallest unit (cents, etc.) FOR THE CONTAINER
+    double volume;                   // Volume of container (e.g., 1.0, 0.95, 33.8)
+    std::string volume_unit;         // Unit: "L", "ml", "fl oz", etc.
+    int64_t price_per_liter;         // Calculated price per liter (pro-rated)
     std::string location;            // Geographic location (for offline measurements)
     std::string source_url;          // Source URL (for online measurements)
     std::string proof_image_hash;    // IPFS or SHA256 hash of proof image
@@ -96,13 +99,15 @@ struct WaterPriceMeasurement {
     AutomatedValidationInfo auto_validation; // Automated validation results
     
     WaterPriceMeasurement() 
-        : measurement_id(), submitter(), currency_code(), price(0), location(),
+        : measurement_id(), submitter(), currency_code(), price(0), volume(1.0), 
+          volume_unit("L"), price_per_liter(0), location(),
           source_url(), proof_image_hash(), timestamp(0), block_height(0), is_validated(false),
           confidence_score(0.0), invite_id(), source(MeasurementSource::USER_ONLINE) {}
     
     SERIALIZE_METHODS(WaterPriceMeasurement, obj) {
         uint8_t source_val = static_cast<uint8_t>(obj.source);
         READWRITE(obj.measurement_id, obj.submitter, obj.currency_code, obj.price,
+                  obj.volume, obj.volume_unit, obj.price_per_liter,
                   obj.location, obj.source_url, obj.proof_image_hash, obj.timestamp, obj.block_height,
                   obj.is_validated, obj.validators, obj.confidence_score, obj.invite_id,
                   source_val, obj.auto_validation);
