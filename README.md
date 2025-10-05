@@ -19,6 +19,18 @@ Thank you for your interest and support!
 [![Test Status](https://img.shields.io/badge/Tests-75%25%20Passing-yellow.svg)](https://github.com/o-blockchain/o-blockchain)
 [![Bitcoin Core](https://img.shields.io/badge/Built%20on-Bitcoin%20Core-orange.svg)](https://bitcoincore.org/)
 
+## 📚 **Complete System Documentation**
+
+For comprehensive documentation of all system components, features, and integration, see:
+**[O_BLOCKCHAIN_COMPLETE_SYSTEM.md](O_BLOCKCHAIN_COMPLETE_SYSTEM.md)**
+
+This document covers:
+- Enhanced Exchange Rate System with scenario distinction
+- Measurement Readiness System with start conditions  
+- Measurement Rewards System with integrated rewards
+- Enhanced Invitation System with readiness validation
+- Complete workflow integration and RPC command reference
+
 > **Building a Universal Currency for Global Prosperity**
 
 The O Blockchain is a revolutionary stablecoin system that creates a universal currency pegged to the value of potable water. Unlike traditional cryptocurrencies or fiat currencies, O coin maintains stability through real-world water price measurements, making it the perfect foundation for solving global challenges that current economic systems cannot address.
