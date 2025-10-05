@@ -20,4 +20,9 @@ UniValue checkmeasurementreadiness(const JSONRPCRequest& request);
 UniValue getdailyaverages(const JSONRPCRequest& request);
 UniValue calculatedailyaverages(const JSONRPCRequest& request);
 
+// New confidence-aware RPC commands
+UniValue getaveragewaterpricewithconfidence(const JSONRPCRequest& request);
+UniValue getaverageexchangeratewithconfidence(const JSONRPCRequest& request);
+UniValue getdailyaveragewithconfidence(const JSONRPCRequest& request);
+
 #endif // BITCOIN_RPC_O_MEASUREMENT_RPC_H

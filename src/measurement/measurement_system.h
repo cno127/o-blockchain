@@ -149,6 +149,63 @@ struct ValidatedURL {
     uint256 GetHash() const;
 };
 
+/** Statistical Confidence Levels */
+enum class ConfidenceLevel {
+    INSUFFICIENT_DATA = 0,    // Less than MIN_MEASUREMENTS_FOR_SIGNIFICANT_AVERAGE
+    LOW_CONFIDENCE = 1,       // MIN_MEASUREMENTS_FOR_SIGNIFICANT_AVERAGE to MIN_MEASUREMENTS_FOR_HIGH_CONFIDENCE-1
+    HIGH_CONFIDENCE = 2,      // MIN_MEASUREMENTS_FOR_HIGH_CONFIDENCE or more
+    VERY_HIGH_CONFIDENCE = 3  // 20+ measurements
+};
+
+/** Average with Confidence Information */
+struct AverageWithConfidence {
+    double value;
+    int measurement_count;
+    double std_deviation;
+    ConfidenceLevel confidence_level;
+    bool is_statistically_significant;
+    
+    AverageWithConfidence() 
+        : value(0.0), measurement_count(0), std_deviation(0.0), 
+          confidence_level(ConfidenceLevel::INSUFFICIENT_DATA), is_statistically_significant(false) {}
+    
+    AverageWithConfidence(double val, int count, double std_dev)
+        : value(val), measurement_count(count), std_deviation(std_dev) {
+        UpdateConfidenceLevel();
+    }
+    
+    void UpdateConfidenceLevel() {
+        if (measurement_count < Config::MIN_MEASUREMENTS_FOR_SIGNIFICANT_AVERAGE) {
+            confidence_level = ConfidenceLevel::INSUFFICIENT_DATA;
+            is_statistically_significant = false;
+        } else if (measurement_count < Config::MIN_MEASUREMENTS_FOR_HIGH_CONFIDENCE) {
+            confidence_level = ConfidenceLevel::LOW_CONFIDENCE;
+            is_statistically_significant = true;
+        } else if (measurement_count < 20) {
+            confidence_level = ConfidenceLevel::HIGH_CONFIDENCE;
+            is_statistically_significant = true;
+        } else {
+            confidence_level = ConfidenceLevel::VERY_HIGH_CONFIDENCE;
+            is_statistically_significant = true;
+        }
+    }
+    
+    std::string GetConfidenceString() const {
+        switch (confidence_level) {
+            case ConfidenceLevel::INSUFFICIENT_DATA: return "insufficient_data";
+            case ConfidenceLevel::LOW_CONFIDENCE: return "low_confidence";
+            case ConfidenceLevel::HIGH_CONFIDENCE: return "high_confidence";
+            case ConfidenceLevel::VERY_HIGH_CONFIDENCE: return "very_high_confidence";
+            default: return "unknown";
+        }
+    }
+    
+    SERIALIZE_METHODS(AverageWithConfidence, obj) {
+        READWRITE(obj.value, obj.measurement_count, obj.std_deviation, 
+                  obj.confidence_level, obj.is_statistically_significant);
+    }
+};
+
 /** Daily Average Statistics */
 struct DailyAverage {
     std::string currency_code;
@@ -159,14 +216,18 @@ struct DailyAverage {
     double std_deviation;            // Standard deviation
     bool is_stable;                  // Currency stability status
     int block_height;                // Block height when calculated
+    ConfidenceLevel confidence_level; // Statistical confidence level
+    bool is_statistically_significant; // Whether the average is statistically significant
     
     DailyAverage()
         : currency_code(), date(), avg_water_price(0.0), avg_exchange_rate(0.0),
-          measurement_count(0), std_deviation(0.0), is_stable(true), block_height(0) {}
+          measurement_count(0), std_deviation(0.0), is_stable(true), block_height(0),
+          confidence_level(ConfidenceLevel::INSUFFICIENT_DATA), is_statistically_significant(false) {}
     
     SERIALIZE_METHODS(DailyAverage, obj) {
         READWRITE(obj.currency_code, obj.date, obj.avg_water_price, obj.avg_exchange_rate,
-                  obj.measurement_count, obj.std_deviation, obj.is_stable, obj.block_height);
+                  obj.measurement_count, obj.std_deviation, obj.is_stable, obj.block_height,
+                  obj.confidence_level, obj.is_statistically_significant);
     }
 };
 
@@ -192,6 +253,11 @@ namespace Config {
     static constexpr int INVITE_EXPIRATION_DAYS = 7;                 // Invites expire after 7 days
     static constexpr int MIN_VALIDATORS_REQUIRED = 3;                // Minimum validators for confidence
     static constexpr double GAUSSIAN_STD_THRESHOLD = 2.0;            // Standard deviations for outliers
+    
+    // Statistical significance requirements
+    static constexpr int MIN_MEASUREMENTS_FOR_SIGNIFICANT_AVERAGE = 5;    // Minimum measurements for statistical significance
+    static constexpr int MIN_MEASUREMENTS_FOR_HIGH_CONFIDENCE = 10;       // Minimum measurements for high confidence
+    static constexpr int MIN_MEASUREMENTS_FOR_DAILY_AVERAGE = 3;          // Minimum measurements for daily average
 }
 
 /** Measurement System Manager */
@@ -277,10 +343,17 @@ public:
     
     // ===== Statistics & Averages =====
     
-    /** Calculate average water price for a currency */
+    /** Calculate average water price for a currency with confidence information */
+    std::optional<AverageWithConfidence> GetAverageWaterPriceWithConfidence(const std::string& currency, int days) const;
+    
+    /** Calculate average exchange rate with confidence information */
+    std::optional<AverageWithConfidence> GetAverageExchangeRateWithConfidence(
+        const std::string& from_currency, const std::string& to_currency, int days) const;
+    
+    /** Calculate average water price for a currency (legacy - returns nullopt if not statistically significant) */
     std::optional<double> GetAverageWaterPrice(const std::string& currency, int days) const;
     
-    /** Calculate average exchange rate */
+    /** Calculate average exchange rate (legacy - returns nullopt if not statistically significant) */
     std::optional<double> GetAverageExchangeRate(
         const std::string& from_currency, const std::string& to_currency, int days) const;
     
@@ -322,6 +395,9 @@ public:
     
     /** Calculate Gaussian average (excludes outliers) */
     double CalculateGaussianAverage(const std::vector<double>& values) const;
+    
+    /** Calculate standard deviation */
+    double CalculateStandardDeviation(const std::vector<double>& values) const;
     
     /** Get conversion rate (successful measurements / invites sent) */
     double GetConversionRate(MeasurementType type) const;

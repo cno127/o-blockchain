@@ -773,6 +773,178 @@ static RPCHelpMan calculatedailyaverages()
     };
 }
 
+static RPCHelpMan getaveragewaterpricewithconfidence()
+{
+    return RPCHelpMan{
+        "getaveragewaterpricewithconfidence",
+        "\nGet average water price with confidence information.\n",
+        {
+            {"currency", RPCArg::Type::STR, RPCArg::Optional::NO, "Currency code (e.g., 'USD', 'EUR')"},
+            {"days", RPCArg::Type::NUM, RPCArg::Optional::OMITTED, "Number of days to look back (default: 30)"},
+        },
+        RPCResult{
+            RPCResult::Type::OBJ, "", "",
+            {
+                {RPCResult::Type::STR, "currency", "Currency code"},
+                {RPCResult::Type::NUM, "average_price", "Average water price"},
+                {RPCResult::Type::NUM, "measurement_count", "Number of measurements used"},
+                {RPCResult::Type::NUM, "standard_deviation", "Standard deviation"},
+                {RPCResult::Type::STR, "confidence_level", "Confidence level: insufficient_data, low_confidence, high_confidence, very_high_confidence"},
+                {RPCResult::Type::BOOL, "is_statistically_significant", "Whether the average is statistically significant"},
+                {RPCResult::Type::NUM, "days", "Number of days analyzed"},
+            }
+        },
+        RPCExamples{
+            HelpExampleCli("getaveragewaterpricewithconfidence", "USD")
+            + HelpExampleCli("getaveragewaterpricewithconfidence", "EUR 7")
+            + HelpExampleRpc("getaveragewaterpricewithconfidence", "USD")
+        },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+        {
+            std::string currency = request.params[0].get_str();
+            int days = request.params[1].isNull() ? 30 : request.params[1].getInt<int>();
+            
+            auto result = g_measurement_system.GetAverageWaterPriceWithConfidence(currency, days);
+            
+            if (!result.has_value()) {
+                throw JSONRPCError(RPC_INVALID_REQUEST, "No water price measurements found for the specified currency and time period");
+            }
+            
+            UniValue response(UniValue::VOBJ);
+            response.pushKV("currency", currency);
+            response.pushKV("average_price", result->value);
+            response.pushKV("measurement_count", result->measurement_count);
+            response.pushKV("standard_deviation", result->std_deviation);
+            response.pushKV("confidence_level", result->GetConfidenceString());
+            response.pushKV("is_statistically_significant", result->is_statistically_significant);
+            response.pushKV("days", days);
+            
+            return response;
+        }
+    };
+}
+
+static RPCHelpMan getaverageexchangeratewithconfidence()
+{
+    return RPCHelpMan{
+        "getaverageexchangeratewithconfidence",
+        "\nGet average exchange rate with confidence information.\n",
+        {
+            {"from_currency", RPCArg::Type::STR, RPCArg::Optional::NO, "From currency code (e.g., 'OUSD')"},
+            {"to_currency", RPCArg::Type::STR, RPCArg::Optional::NO, "To currency code (e.g., 'USD')"},
+            {"days", RPCArg::Type::NUM, RPCArg::Optional::OMITTED, "Number of days to look back (default: 7)"},
+        },
+        RPCResult{
+            RPCResult::Type::OBJ, "", "",
+            {
+                {RPCResult::Type::STR, "from_currency", "From currency code"},
+                {RPCResult::Type::STR, "to_currency", "To currency code"},
+                {RPCResult::Type::NUM, "average_rate", "Average exchange rate"},
+                {RPCResult::Type::NUM, "measurement_count", "Number of measurements used"},
+                {RPCResult::Type::NUM, "standard_deviation", "Standard deviation"},
+                {RPCResult::Type::STR, "confidence_level", "Confidence level: insufficient_data, low_confidence, high_confidence, very_high_confidence"},
+                {RPCResult::Type::BOOL, "is_statistically_significant", "Whether the average is statistically significant"},
+                {RPCResult::Type::NUM, "days", "Number of days analyzed"},
+            }
+        },
+        RPCExamples{
+            HelpExampleCli("getaverageexchangeratewithconfidence", "OUSD USD")
+            + HelpExampleCli("getaverageexchangeratewithconfidence", "OEUR EUR 14")
+            + HelpExampleRpc("getaverageexchangeratewithconfidence", "OUSD USD")
+        },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+        {
+            std::string from_currency = request.params[0].get_str();
+            std::string to_currency = request.params[1].get_str();
+            int days = request.params[2].isNull() ? 7 : request.params[2].getInt<int>();
+            
+            auto result = g_measurement_system.GetAverageExchangeRateWithConfidence(from_currency, to_currency, days);
+            
+            if (!result.has_value()) {
+                throw JSONRPCError(RPC_INVALID_REQUEST, "No exchange rate measurements found for the specified currency pair and time period");
+            }
+            
+            UniValue response(UniValue::VOBJ);
+            response.pushKV("from_currency", from_currency);
+            response.pushKV("to_currency", to_currency);
+            response.pushKV("average_rate", result->value);
+            response.pushKV("measurement_count", result->measurement_count);
+            response.pushKV("standard_deviation", result->std_deviation);
+            response.pushKV("confidence_level", result->GetConfidenceString());
+            response.pushKV("is_statistically_significant", result->is_statistically_significant);
+            response.pushKV("days", days);
+            
+            return response;
+        }
+    };
+}
+
+static RPCHelpMan getdailyaveragewithconfidence()
+{
+    return RPCHelpMan{
+        "getdailyaveragewithconfidence",
+        "\nGet daily average with confidence information.\n",
+        {
+            {"currency", RPCArg::Type::STR, RPCArg::Optional::NO, "Currency code (e.g., 'OUSD')"},
+            {"date", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "Date in YYYY-MM-DD format (default: today)"},
+        },
+        RPCResult{
+            RPCResult::Type::OBJ, "", "",
+            {
+                {RPCResult::Type::STR, "currency", "Currency code"},
+                {RPCResult::Type::STR, "date", "Date"},
+                {RPCResult::Type::NUM, "avg_water_price", "Average water price"},
+                {RPCResult::Type::NUM, "avg_exchange_rate", "Average exchange rate"},
+                {RPCResult::Type::NUM, "measurement_count", "Number of measurements used"},
+                {RPCResult::Type::NUM, "standard_deviation", "Standard deviation"},
+                {RPCResult::Type::STR, "confidence_level", "Confidence level: insufficient_data, low_confidence, high_confidence, very_high_confidence"},
+                {RPCResult::Type::BOOL, "is_statistically_significant", "Whether the average is statistically significant"},
+                {RPCResult::Type::BOOL, "is_stable", "Whether the currency is stable"},
+                {RPCResult::Type::NUM, "block_height", "Block height when calculated"},
+            }
+        },
+        RPCExamples{
+            HelpExampleCli("getdailyaveragewithconfidence", "OUSD")
+            + HelpExampleCli("getdailyaveragewithconfidence", "OEUR 2024-01-15")
+            + HelpExampleRpc("getdailyaveragewithconfidence", "OUSD")
+        },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+        {
+            std::string currency = request.params[0].get_str();
+            std::string date = request.params[1].isNull() ? g_measurement_system.FormatDate(GetTime()) : request.params[1].get_str();
+            
+            auto result = g_measurement_system.GetDailyAverage(currency, date);
+            
+            if (!result.has_value()) {
+                throw JSONRPCError(RPC_INVALID_REQUEST, "No daily average found for the specified currency and date");
+            }
+            
+            std::string confidence_str;
+            switch (result->confidence_level) {
+                case OMeasurement::ConfidenceLevel::INSUFFICIENT_DATA: confidence_str = "insufficient_data"; break;
+                case OMeasurement::ConfidenceLevel::LOW_CONFIDENCE: confidence_str = "low_confidence"; break;
+                case OMeasurement::ConfidenceLevel::HIGH_CONFIDENCE: confidence_str = "high_confidence"; break;
+                case OMeasurement::ConfidenceLevel::VERY_HIGH_CONFIDENCE: confidence_str = "very_high_confidence"; break;
+                default: confidence_str = "unknown"; break;
+            }
+            
+            UniValue response(UniValue::VOBJ);
+            response.pushKV("currency", result->currency_code);
+            response.pushKV("date", result->date);
+            response.pushKV("avg_water_price", result->avg_water_price);
+            response.pushKV("avg_exchange_rate", result->avg_exchange_rate);
+            response.pushKV("measurement_count", result->measurement_count);
+            response.pushKV("standard_deviation", result->std_deviation);
+            response.pushKV("confidence_level", confidence_str);
+            response.pushKV("is_statistically_significant", result->is_statistically_significant);
+            response.pushKV("is_stable", result->is_stable);
+            response.pushKV("block_height", result->block_height);
+            
+            return response;
+        }
+    };
+}
+
 void RegisterOMeasurementRPCCommands(CRPCTable& t)
 {
     static const CRPCCommand commands[] = {
@@ -788,6 +960,9 @@ void RegisterOMeasurementRPCCommands(CRPCTable& t)
         {"measurement", &getdailyaverageexchangerate},
         {"measurement", &getdailyaverages},
         {"measurement", &calculatedailyaverages},
+        {"measurement", &getaveragewaterpricewithconfidence},
+        {"measurement", &getaverageexchangeratewithconfidence},
+        {"measurement", &getdailyaveragewithconfidence},
     };
     
     for (const auto& c : commands) {

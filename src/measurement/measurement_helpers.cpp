@@ -206,7 +206,7 @@ void MeasurementSystem::UpdateURLReliability(const uint256& url_id, bool success
 
 // ===== Statistics & Averages =====
 
-std::optional<double> MeasurementSystem::GetAverageWaterPrice(
+std::optional<AverageWithConfidence> MeasurementSystem::GetAverageWaterPriceWithConfidence(
     const std::string& currency, int days) const
 {
     int64_t current_time = GetTime();
@@ -225,11 +225,18 @@ std::optional<double> MeasurementSystem::GetAverageWaterPrice(
     }
     
     double avg = CalculateGaussianAverage(prices);
+    double std_dev = CalculateStandardDeviation(prices);
     
-    return avg;
+    AverageWithConfidence result(avg, static_cast<int>(measurements.size()), std_dev);
+    
+    LogPrintf("O Measurement: Water price average for %s over %d days: %.4f (n=%d, std_dev=%.4f, confidence=%s)\n",
+              currency.c_str(), days, avg, static_cast<int>(measurements.size()), std_dev, 
+              result.GetConfidenceString().c_str());
+    
+    return result;
 }
 
-std::optional<double> MeasurementSystem::GetAverageExchangeRate(
+std::optional<AverageWithConfidence> MeasurementSystem::GetAverageExchangeRateWithConfidence(
     const std::string& from_currency, const std::string& to_currency, int days) const
 {
     int64_t current_time = GetTime();
@@ -247,8 +254,53 @@ std::optional<double> MeasurementSystem::GetAverageExchangeRate(
         rates.push_back(m.exchange_rate);
     }
     
-    double sum = std::accumulate(rates.begin(), rates.end(), 0.0);
-    return sum / rates.size();
+    double avg = CalculateGaussianAverage(rates);
+    double std_dev = CalculateStandardDeviation(rates);
+    
+    AverageWithConfidence result(avg, static_cast<int>(measurements.size()), std_dev);
+    
+    LogPrintf("O Measurement: Exchange rate average for %s->%s over %d days: %.4f (n=%d, std_dev=%.4f, confidence=%s)\n",
+              from_currency.c_str(), to_currency.c_str(), days, avg, 
+              static_cast<int>(measurements.size()), std_dev, result.GetConfidenceString().c_str());
+    
+    return result;
+}
+
+std::optional<double> MeasurementSystem::GetAverageWaterPrice(
+    const std::string& currency, int days) const
+{
+    auto result = GetAverageWaterPriceWithConfidence(currency, days);
+    if (!result.has_value()) {
+        return std::nullopt;
+    }
+    
+    // Only return the average if it's statistically significant
+    if (!result->is_statistically_significant) {
+        LogPrintf("O Measurement: Water price average for %s not statistically significant (n=%d, need %d+)\n",
+                  currency.c_str(), result->measurement_count, Config::MIN_MEASUREMENTS_FOR_SIGNIFICANT_AVERAGE);
+        return std::nullopt;
+    }
+    
+    return result->value;
+}
+
+std::optional<double> MeasurementSystem::GetAverageExchangeRate(
+    const std::string& from_currency, const std::string& to_currency, int days) const
+{
+    auto result = GetAverageExchangeRateWithConfidence(from_currency, to_currency, days);
+    if (!result.has_value()) {
+        return std::nullopt;
+    }
+    
+    // Only return the average if it's statistically significant
+    if (!result->is_statistically_significant) {
+        LogPrintf("O Measurement: Exchange rate average for %s->%s not statistically significant (n=%d, need %d+)\n",
+                  from_currency.c_str(), to_currency.c_str(), result->measurement_count, 
+                  Config::MIN_MEASUREMENTS_FOR_SIGNIFICANT_AVERAGE);
+        return std::nullopt;
+    }
+    
+    return result->value;
 }
 
 double MeasurementSystem::CalculateGaussianAverage(const std::vector<double>& values) const
@@ -259,7 +311,7 @@ double MeasurementSystem::CalculateGaussianAverage(const std::vector<double>& va
     double sum = std::accumulate(values.begin(), values.end(), 0.0);
     double mean = sum / values.size();
     
-    [[maybe_unused]] double std_dev = CalculateStandardDeviation(values, mean);
+    [[maybe_unused]] double std_dev = CalculateStandardDeviation(values);
     
     std::vector<double> filtered = FilterOutliers(values, Config::GAUSSIAN_STD_THRESHOLD);
     
@@ -269,6 +321,23 @@ double MeasurementSystem::CalculateGaussianAverage(const std::vector<double>& va
     
     sum = std::accumulate(filtered.begin(), filtered.end(), 0.0);
     return sum / filtered.size();
+}
+
+double MeasurementSystem::CalculateStandardDeviation(const std::vector<double>& values) const
+{
+    if (values.empty()) return 0.0;
+    if (values.size() == 1) return 0.0;
+    
+    double sum = std::accumulate(values.begin(), values.end(), 0.0);
+    double mean = sum / values.size();
+    
+    double variance = 0.0;
+    for (double value : values) {
+        variance += (value - mean) * (value - mean);
+    }
+    variance /= values.size();
+    
+    return std::sqrt(variance);
 }
 
 double MeasurementSystem::GetConversionRate(MeasurementType type) const
@@ -308,10 +377,22 @@ void MeasurementSystem::StoreDailyAverage(const DailyAverage& avg)
     std::string key = avg.currency_code + "_" + avg.date;
     m_daily_averages[key] = avg;
     
+    std::string confidence_str;
+    switch (avg.confidence_level) {
+        case ConfidenceLevel::INSUFFICIENT_DATA: confidence_str = "INSUFFICIENT_DATA"; break;
+        case ConfidenceLevel::LOW_CONFIDENCE: confidence_str = "LOW_CONFIDENCE"; break;
+        case ConfidenceLevel::HIGH_CONFIDENCE: confidence_str = "HIGH_CONFIDENCE"; break;
+        case ConfidenceLevel::VERY_HIGH_CONFIDENCE: confidence_str = "VERY_HIGH_CONFIDENCE"; break;
+        default: confidence_str = "UNKNOWN"; break;
+    }
+    
     LogPrintf("O Measurement: Stored daily average for %s on %s - "
-              "Water price: %.4f, Exchange rate: %.4f, Measurements: %d, Stable: %s\n",
+              "Water price: %.4f, Exchange rate: %.4f, Measurements: %d, "
+              "Std dev: %.4f, Confidence: %s, Significant: %s, Stable: %s\n",
               avg.currency_code.c_str(), avg.date.c_str(), avg.avg_water_price,
-              avg.avg_exchange_rate, avg.measurement_count, avg.is_stable ? "YES" : "NO");
+              avg.avg_exchange_rate, avg.measurement_count, avg.std_deviation,
+              confidence_str.c_str(), avg.is_statistically_significant ? "YES" : "NO",
+              avg.is_stable ? "YES" : "NO");
 }
 
 void MeasurementSystem::CalculateDailyAverages(int height) {
@@ -360,16 +441,40 @@ void MeasurementSystem::CalculateDailyAverageForCurrency(const std::string& curr
         is_stable = IsOCurrencyStable(currency, exchange_rate_avg);
     }
     
+    // Get measurement count and calculate confidence
+    int measurement_count = GetDailyMeasurementCount(currency, date);
+    double std_deviation = CalculateDailyStandardDeviation(currency, date);
+    
+    // Calculate confidence level
+    ConfidenceLevel confidence_level;
+    bool is_statistically_significant;
+    
+    if (measurement_count < Config::MIN_MEASUREMENTS_FOR_SIGNIFICANT_AVERAGE) {
+        confidence_level = ConfidenceLevel::INSUFFICIENT_DATA;
+        is_statistically_significant = false;
+    } else if (measurement_count < Config::MIN_MEASUREMENTS_FOR_HIGH_CONFIDENCE) {
+        confidence_level = ConfidenceLevel::LOW_CONFIDENCE;
+        is_statistically_significant = true;
+    } else if (measurement_count < 20) {
+        confidence_level = ConfidenceLevel::HIGH_CONFIDENCE;
+        is_statistically_significant = true;
+    } else {
+        confidence_level = ConfidenceLevel::VERY_HIGH_CONFIDENCE;
+        is_statistically_significant = true;
+    }
+    
     // Create daily average record
     DailyAverage daily_avg;
     daily_avg.currency_code = currency;
     daily_avg.date = date;
     daily_avg.avg_water_price = water_price_avg.value_or(0.0);
     daily_avg.avg_exchange_rate = exchange_rate_avg;
-    daily_avg.measurement_count = GetDailyMeasurementCount(currency, date);
-    daily_avg.std_deviation = CalculateDailyStandardDeviation(currency, date);
+    daily_avg.measurement_count = measurement_count;
+    daily_avg.std_deviation = std_deviation;
     daily_avg.is_stable = is_stable;
     daily_avg.block_height = height;
+    daily_avg.confidence_level = confidence_level;
+    daily_avg.is_statistically_significant = is_statistically_significant;
     
     // Store the daily average
     StoreDailyAverage(daily_avg);

@@ -47,6 +47,11 @@ bitcoin-cli getmeasurementtrend OUSD USD
 
 # Get overall statistics
 bitcoin-cli getexchangeratestatistics
+
+# Get averages with confidence information
+bitcoin-cli getaveragewaterpricewithconfidence USD 30
+bitcoin-cli getaverageexchangeratewithconfidence OUSD USD 7
+bitcoin-cli getdailyaveragewithconfidence OUSD
 ```
 
 ### **Usage Examples**
@@ -144,7 +149,73 @@ bitcoin-cli getreadinessstatus OUSD
 
 ---
 
-## 🎁 **3. Measurement Rewards System**
+## 📊 **3. Statistical Significance System**
+
+### **Key Features**
+- **Confidence Levels**: Four levels of statistical confidence based on measurement count
+- **Minimum Thresholds**: Configurable minimum measurements for statistical significance
+- **Standard Deviation**: Calculates and reports standard deviation for all averages
+- **Significance Validation**: Ensures averages are statistically meaningful before use
+- **Comprehensive Logging**: Detailed logging of confidence levels and significance
+
+### **Confidence Levels**
+- **`INSUFFICIENT_DATA`** - Less than 5 measurements (not statistically significant)
+- **`LOW_CONFIDENCE`** - 5-9 measurements (statistically significant but low confidence)
+- **`HIGH_CONFIDENCE`** - 10-19 measurements (high confidence)
+- **`VERY_HIGH_CONFIDENCE`** - 20+ measurements (very high confidence)
+
+### **Configuration Parameters**
+```cpp
+static constexpr int MIN_MEASUREMENTS_FOR_SIGNIFICANT_AVERAGE = 5;    // Minimum for significance
+static constexpr int MIN_MEASUREMENTS_FOR_HIGH_CONFIDENCE = 10;       // Minimum for high confidence
+static constexpr int MIN_MEASUREMENTS_FOR_DAILY_AVERAGE = 3;          // Minimum for daily averages
+```
+
+### **RPC Commands**
+```bash
+# Get water price average with confidence information
+bitcoin-cli getaveragewaterpricewithconfidence USD 30
+
+# Get exchange rate average with confidence information
+bitcoin-cli getaverageexchangeratewithconfidence OUSD USD 7
+
+# Get daily average with confidence information
+bitcoin-cli getdailyaveragewithconfidence OUSD
+```
+
+### **Usage Examples**
+```bash
+# Check water price confidence
+bitcoin-cli getaveragewaterpricewithconfidence USD 30
+# Response:
+{
+  "currency": "USD",
+  "average_price": 1.2500,
+  "measurement_count": 15,
+  "standard_deviation": 0.1250,
+  "confidence_level": "high_confidence",
+  "is_statistically_significant": true,
+  "days": 30
+}
+
+# Check exchange rate confidence
+bitcoin-cli getaverageexchangeratewithconfidence OUSD USD 7
+# Response:
+{
+  "from_currency": "OUSD",
+  "to_currency": "USD",
+  "average_rate": 1.2000,
+  "measurement_count": 8,
+  "standard_deviation": 0.0800,
+  "confidence_level": "low_confidence",
+  "is_statistically_significant": true,
+  "days": 7
+}
+```
+
+---
+
+## 🎁 **4. Measurement Rewards System**
 
 ### **Key Features**
 - **Integrated Rewards**: Measurement rewards created during block mining
@@ -186,7 +257,7 @@ bitcoin-cli getmeasurementrewardstats
 
 ---
 
-## 📧 **4. Enhanced Invitation System**
+## 📧 **5. Enhanced Invitation System**
 
 ### **Key Features**
 - **Readiness Validation**: Checks infrastructure before sending invitations
@@ -246,7 +317,7 @@ bitcoin-cli createinvites 10 water USD
 
 ---
 
-## 🔄 **5. Complete Workflow Integration**
+## 🔄 **6. Complete Workflow Integration**
 
 ### **System Startup**
 ```bash
@@ -321,7 +392,7 @@ bitcoin-cli detectcurrencydisappearance OUSD USD
 
 ---
 
-## 🎯 **6. Key Benefits of the Complete System**
+## 🎯 **7. Key Benefits of the Complete System**
 
 ### **Infrastructure Validation**
 - Ensures sufficient users and coins before starting measurements
@@ -350,7 +421,7 @@ bitcoin-cli detectcurrencydisappearance OUSD USD
 
 ---
 
-## 🚀 **7. Technical Implementation**
+## 🚀 **8. Technical Implementation**
 
 ### **Architecture Overview**
 ```
@@ -381,7 +452,7 @@ bitcoin-cli detectcurrencydisappearance OUSD USD
 
 ---
 
-## 📊 **8. RPC Command Reference**
+## 📊 **9. RPC Command Reference**
 
 ### **Exchange Rate Management**
 - `initializeexchangerates` - Initialize with theoretical rates
@@ -410,16 +481,22 @@ bitcoin-cli detectcurrencydisappearance OUSD USD
 - `createinvites` - Create invitations (with readiness checks)
 - `createinvitesfortarget` - Create target-based invitations
 
+### **Statistical Significance**
+- `getaveragewaterpricewithconfidence` - Get water price average with confidence info
+- `getaverageexchangeratewithconfidence` - Get exchange rate average with confidence info
+- `getdailyaveragewithconfidence` - Get daily average with confidence info
+
 ---
 
-## 🎉 **9. System Status**
+## 🎉 **10. System Status**
 
 ### **✅ Completed Features**
 - Enhanced Exchange Rate System with scenario distinction
 - Measurement Readiness System with start conditions
+- Statistical Significance System with confidence levels
 - Measurement Rewards System with integrated rewards
 - Enhanced Invitation System with readiness validation
-- Comprehensive RPC interface with 20+ commands
+- Comprehensive RPC interface with 25+ commands
 - Complete integration between all systems
 - Comprehensive documentation and testing
 
