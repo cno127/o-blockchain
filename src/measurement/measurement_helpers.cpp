@@ -7,6 +7,7 @@
 #include <consensus/currency_lifecycle.h>
 #include <consensus/currency_disappearance_handling.h>
 #include <consensus/measurement_readiness.h>
+#include <consensus/stabilization_mining.h>
 #include <hash.h>
 #include <logging.h>
 #include <random.h>
@@ -563,6 +564,9 @@ void MeasurementSystem::CalculateDailyAverages(int height) {
     for (const auto& currency : currencies) {
         CalculateDailyAverageForCurrency(currency, today, height);
     }
+    
+    // Recalculate currency stability status after updating averages
+    RecalculateCurrencyStability(height);
 }
 
 void MeasurementSystem::CalculateDailyAverageForCurrency(const std::string& currency, 
@@ -624,6 +628,78 @@ void MeasurementSystem::CalculateDailyAverageForCurrency(const std::string& curr
     
     // Store the daily average
     StoreDailyAverage(daily_avg);
+}
+
+void MeasurementSystem::RecalculateCurrencyStability(int height) {
+    LogPrintf("O Measurement: Recalculating currency stability status...\n");
+    
+    // Get all supported currencies
+    std::vector<std::string> currencies = {
+        "USD", "EUR", "JPY", "GBP", "CNY", "CAD", "AUD", "CHF", "NZD", "SEK", "NOK", "DKK", "PLN", "CZK", "HUF", "RON", "BGN", "HRK", "RUB", "TRY", "ZAR", "BRL", "MXN", "INR", "KRW", "SGD", "HKD", "TWD", "THB", "MYR", "IDR", "PHP", "VND", "PKR", "BDT", "LKR", "NPR", "AFN", "AMD", "AZN", "BYN", "BGN", "BIF", "KHR", "KGS", "KZT", "LAK", "LSL", "LTL", "MDL", "MKD", "MNT", "RON", "RSD", "TJS", "TMT", "UAH", "UZS", "XDR", "ZWL"
+    };
+    
+    int stability_updates = 0;
+    
+    // Check stability for each currency
+    for (const auto& currency : currencies) {
+        // Get current water price average
+        auto water_price_avg = GetAverageWaterPriceWithConfidence(currency, 7);
+        if (!water_price_avg.has_value() || !water_price_avg->is_statistically_significant) {
+            continue; // Skip if no significant data
+        }
+        
+        double observed_water_price = water_price_avg->value;
+        double expected_water_price = 1.0; // Target: 1 O coin = 1 liter of water
+        
+        // For O currencies, also check exchange rate stability
+        std::string o_currency = "O" + currency;
+        if (IsOCurrency(o_currency)) {
+            std::string fiat_currency = GetCorrespondingFiatCurrency(o_currency);
+            auto exchange_rate_avg = GetAverageExchangeRateWithConfidence(o_currency, fiat_currency, 7);
+            
+            if (exchange_rate_avg.has_value() && exchange_rate_avg->is_statistically_significant) {
+                double observed_exchange_rate = exchange_rate_avg->value;
+                double theoretical_exchange_rate = observed_water_price; // Should equal water price
+                
+                // Update stability status for O currency
+                OConsensus::g_stabilization_mining.UpdateStabilityStatus(
+                    o_currency, 
+                    theoretical_exchange_rate, 
+                    observed_exchange_rate, 
+                    observed_exchange_rate, 
+                    height
+                );
+                stability_updates++;
+                
+                LogPrintf("O Measurement: Updated stability for %s - Theoretical: %.4f, Observed: %.4f\n",
+                         o_currency.c_str(), theoretical_exchange_rate, observed_exchange_rate);
+            }
+        }
+        
+        // For O_ONLY currencies, check if water price in O coin is stable around 1.0
+        if (g_currency_lifecycle_manager.IsOOnlyCurrency(currency)) {
+            auto o_water_price_avg = GetAverageWaterPriceWithConfidence(currency, 7);
+            if (o_water_price_avg.has_value() && o_water_price_avg->is_statistically_significant) {
+                double observed_o_water_price = o_water_price_avg->value;
+                double expected_o_water_price = 1.0; // Target: 1 O coin = 1 liter of water
+                
+                // Update stability status for O_ONLY currency
+                OConsensus::g_stabilization_mining.UpdateStabilityStatus(
+                    currency, 
+                    expected_o_water_price, 
+                    observed_o_water_price, 
+                    1.0, // Exchange rate is always 1:1 for O_ONLY
+                    height
+                );
+                stability_updates++;
+                
+                LogPrintf("O Measurement: Updated stability for O_ONLY %s - Expected: %.4f, Observed: %.4f\n",
+                         currency.c_str(), expected_o_water_price, observed_o_water_price);
+            }
+        }
+    }
+    
+    LogPrintf("O Measurement: Currency stability recalculation completed. Updated %d currencies.\n", stability_updates);
 }
 
 std::optional<double> MeasurementSystem::GetDailyAverageWaterPrice(const std::string& currency, const std::string& date) const {
@@ -1887,6 +1963,7 @@ bool MeasurementSystem::NeedsMoreMeasurements(MeasurementType type, const std::s
     
     return needs_more;
 }
+
 
 int MeasurementSystem::GetMeasurementGap(MeasurementType type, const std::string& currency) const
 {

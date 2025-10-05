@@ -1555,6 +1555,52 @@ static RPCHelpMan getmeasurementgap()
     };
 }
 
+static RPCHelpMan recalculatecurrencystability()
+{
+    return RPCHelpMan{
+        "recalculatecurrencystability",
+        "\nManually recalculate currency stability status based on current measurement averages.\n",
+        {
+            {"height", RPCArg::Type::NUM, RPCArg::Optional::OMITTED, "Block height (default: 100000)"},
+        },
+        RPCResult{
+            RPCResult::Type::OBJ, "", "",
+            {
+                {RPCResult::Type::BOOL, "success", "Whether the operation was successful"},
+                {RPCResult::Type::NUM, "block_height", "Block height used for calculation"},
+                {RPCResult::Type::STR, "message", "Status message"},
+            }
+        },
+        RPCExamples{
+            HelpExampleCli("recalculatecurrencystability", "")
+            + HelpExampleCli("recalculatecurrencystability", "150000")
+            + HelpExampleRpc("recalculatecurrencystability", "")
+        },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+        {
+            int height = request.params[0].isNull() ? 100000 : request.params[0].getInt<int>();
+            
+            try {
+                g_measurement_system.RecalculateCurrencyStability(height);
+                
+                UniValue response(UniValue::VOBJ);
+                response.pushKV("success", true);
+                response.pushKV("block_height", height);
+                response.pushKV("message", "Currency stability recalculation completed successfully");
+                
+                return response;
+            } catch (const std::exception& e) {
+                UniValue response(UniValue::VOBJ);
+                response.pushKV("success", false);
+                response.pushKV("block_height", height);
+                response.pushKV("message", std::string("Error: ") + e.what());
+                
+                return response;
+            }
+        }
+    };
+}
+
 void RegisterOMeasurementRPCCommands(CRPCTable& t)
 {
     static const CRPCCommand commands[] = {
@@ -1582,6 +1628,7 @@ void RegisterOMeasurementRPCCommands(CRPCTable& t)
         {"measurement", &checkandcreateinvitations},
         {"measurement", &monitormeasurementtargets},
         {"measurement", &getmeasurementgap},
+        {"measurement", &recalculatecurrencystability},
     };
     
     for (const auto& c : commands) {

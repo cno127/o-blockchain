@@ -83,6 +83,11 @@ uint256 MeasurementSystem::SubmitWaterPrice(const WaterPriceMeasurement& measure
     LogDebug(BCLog::NET, "O Measurement: Water price submitted for %s: %d\n",
              measurement.currency_code, measurement.price);
     
+    // Trigger stability recalculation if we have enough measurements
+    if (m_stats.total_measurements_received % 10 == 0) { // Every 10 measurements
+        RecalculateCurrencyStability(0); // Use 0 for height when not in block context
+    }
+    
     return measurement.measurement_id;
 }
 
@@ -173,6 +178,11 @@ uint256 MeasurementSystem::SubmitExchangeRate(const ExchangeRateMeasurement& mea
     
     m_stats.total_measurements_received++;
     m_stats.measurements_by_type[MeasurementType::EXCHANGE_RATE]++;
+    
+    // Trigger stability recalculation if we have enough measurements
+    if (m_stats.total_measurements_received % 10 == 0) { // Every 10 measurements
+        RecalculateCurrencyStability(0); // Use 0 for height when not in block context
+    }
     
     return measurement.measurement_id;
 }

@@ -41,4 +41,7 @@ UniValue checkandcreateinvitations(const JSONRPCRequest& request);
 UniValue monitormeasurementtargets(const JSONRPCRequest& request);
 UniValue getmeasurementgap(const JSONRPCRequest& request);
 
+// Currency stability RPC commands
+UniValue recalculatecurrencystability(const JSONRPCRequest& request);
+
 #endif // BITCOIN_RPC_O_MEASUREMENT_RPC_H

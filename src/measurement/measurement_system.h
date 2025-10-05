@@ -556,6 +556,9 @@ public:
     /** Calculate and store daily averages for all currencies */
     void CalculateDailyAverages(int height);
     
+    /** Recalculate currency stability status based on current averages */
+    void RecalculateCurrencyStability(int height);
+    
     /** Get daily average water price for a specific date */
     std::optional<double> GetDailyAverageWaterPrice(const std::string& currency, const std::string& date) const;
     
