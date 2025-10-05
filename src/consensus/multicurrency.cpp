@@ -141,8 +141,98 @@ void CurrencyRegistry::InitializeDefaultCurrencies() {
     RegisterCurrency(CurrencyMetadata(CURRENCY_SYP, "OSYP", "O Syrian Pound", 2, true, ""));
     RegisterCurrency(CurrencyMetadata(CURRENCY_YER, "OYER", "O Yemeni Rial", 2, true, ""));
     
+    // Additional African Currencies
+    RegisterCurrency(CurrencyMetadata(CURRENCY_MAD, "OMAD", "O Moroccan Dirham", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_DZD, "ODZD", "O Algerian Dinar", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_TND, "OTND", "O Tunisian Dinar", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_LYD, "OLYD", "O Libyan Dinar", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_GHS, "OGHS", "O Ghanaian Cedi", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_XOF, "OXOF", "O West African CFA Franc", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_XAF, "OXAF", "O Central African CFA Franc", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_UGX, "OUGX", "O Ugandan Shilling", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_TZS, "OTZS", "O Tanzanian Shilling", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_RWF, "ORWF", "O Rwandan Franc", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_BIF, "OBIF", "O Burundian Franc", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_ZMW, "OZMW", "O Zambian Kwacha", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_BWP, "OBWP", "O Botswana Pula", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_NAD, "ONAD", "O Namibian Dollar", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_SZL, "OSZL", "O Swazi Lilangeni", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_LSL, "OLSL", "O Lesotho Loti", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_MUR, "OMUR", "O Mauritian Rupee", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_SCR, "OSCR", "O Seychellois Rupee", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_MGA, "OMGA", "O Malagasy Ariary", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_AOA, "OAOA", "O Angolan Kwanza", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_MZN, "OMZN", "O Mozambican Metical", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_ZWL, "OZWL", "O Zimbabwean Dollar", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_SDG, "OSDG", "O Sudanese Pound", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_SSP, "OSSP", "O South Sudanese Pound", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_SOS, "OSOS", "O Somali Shilling", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_DJF, "ODJF", "O Djiboutian Franc", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_ERN, "OERN", "O Eritrean Nakfa", 2, true, ""));
+    
+    // Additional Asian & Pacific Currencies
+    RegisterCurrency(CurrencyMetadata(CURRENCY_MMK, "OMMK", "O Myanmar Kyat", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_KHR, "OKHR", "O Cambodian Riel", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_LAK, "OLAK", "O Lao Kip", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_BND, "OBND", "O Brunei Dollar", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_NPR, "ONPR", "O Nepalese Rupee", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_BTN, "OBTN", "O Bhutanese Ngultrum", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_MVR, "OMVR", "O Maldivian Rufiyaa", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_MNT, "OMNT", "O Mongolian Tugrik", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_KGS, "OKGS", "O Kyrgyzstani Som", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_TJS, "OTJS", "O Tajikistani Somoni", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_TMT, "OTMT", "O Turkmenistani Manat", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_UZS, "OUZS", "O Uzbekistani Som", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_FJD, "OFJD", "O Fijian Dollar", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_PGK, "OPGK", "O Papua New Guinean Kina", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_WST, "OWST", "O Samoan Tala", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_TOP, "OTOP", "O Tongan Paʻanga", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_VUV, "OVUV", "O Vanuatu Vatu", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_SBD, "OSBD", "O Solomon Islands Dollar", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_XPF, "OXPF", "O CFP Franc", 2, true, ""));
+    
+    // Additional European Currencies
+    RegisterCurrency(CurrencyMetadata(CURRENCY_RSD, "ORSD", "O Serbian Dinar", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_MKD, "OMKD", "O Macedonian Denar", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_ALL, "OALL", "O Albanian Lek", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_BAM, "OBAM", "O Bosnia-Herzegovina Mark", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_MDL, "OMDL", "O Moldovan Leu", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_GEL, "OGEL", "O Georgian Lari", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_AMD, "OAMD", "O Armenian Dram", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_AZN, "OAZN", "O Azerbaijani Manat", 2, true, ""));
+    
+    // Additional Americas Currencies
+    RegisterCurrency(CurrencyMetadata(CURRENCY_GTQ, "OGTQ", "O Guatemalan Quetzal", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_HNL, "OHNL", "O Honduran Lempira", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_NIO, "ONIO", "O Nicaraguan Córdoba", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_CRC, "OCRC", "O Costa Rican Colón", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_PAB, "OPAB", "O Panamanian Balboa", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_DOP, "ODOP", "O Dominican Peso", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_HTG, "OHTG", "O Haitian Gourde", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_JMD, "OJMD", "O Jamaican Dollar", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_TTD, "OTTD", "O Trinidad & Tobago Dollar", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_BBD, "OBBD", "O Barbadian Dollar", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_XCD, "OXCD", "O East Caribbean Dollar", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_BOB, "OBOB", "O Bolivian Boliviano", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_PYG, "OPYG", "O Paraguayan Guarani", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_GYD, "OGYD", "O Guyanese Dollar", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_SRD, "OSRD", "O Surinamese Dollar", 2, true, ""));
+    
+    // Additional African Currencies (Continued)
+    RegisterCurrency(CurrencyMetadata(CURRENCY_GNF, "OGNF", "O Guinean Franc", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_LRD, "OLRD", "O Liberian Dollar", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_SLL, "OSLL", "O Sierra Leonean Leone", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_GMD, "OGMD", "O Gambian Dalasi", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_CVE, "OCVE", "O Cape Verdean Escudo", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_STN, "OSTN", "O São Tomé Dobra", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_CDF, "OCDF", "O Congolese Franc", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_MWK, "OMWK", "O Malawian Kwacha", 2, true, ""));
+    RegisterCurrency(CurrencyMetadata(CURRENCY_KMF, "OKMF", "O Comorian Franc", 2, true, ""));
+    
     // Note: Water prices are measured using the existing fiat currencies above
     // No separate water price currencies needed - water prices are measured in USD, EUR, JPY, etc.
+    
+    LogPrintf("O Currency Registry: Initialized with %d currencies\n", static_cast<int>(currencies.size()));
 }
 
 // Global currency registry instance

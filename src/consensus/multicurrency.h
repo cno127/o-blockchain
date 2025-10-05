@@ -96,6 +96,99 @@ static constexpr CurrencyId CURRENCY_LBP = 62; // Lebanese Pound
 static constexpr CurrencyId CURRENCY_SYP = 63; // Syrian Pound
 static constexpr CurrencyId CURRENCY_YER = 64; // Yemeni Rial
 
+// Additional African Currencies
+static constexpr CurrencyId CURRENCY_MAD = 65; // Moroccan Dirham
+static constexpr CurrencyId CURRENCY_DZD = 66; // Algerian Dinar
+static constexpr CurrencyId CURRENCY_TND = 67; // Tunisian Dinar
+static constexpr CurrencyId CURRENCY_LYD = 68; // Libyan Dinar
+static constexpr CurrencyId CURRENCY_GHS = 69; // Ghanaian Cedi
+static constexpr CurrencyId CURRENCY_XOF = 70; // West African CFA Franc
+static constexpr CurrencyId CURRENCY_XAF = 71; // Central African CFA Franc
+static constexpr CurrencyId CURRENCY_UGX = 72; // Ugandan Shilling
+static constexpr CurrencyId CURRENCY_TZS = 73; // Tanzanian Shilling
+static constexpr CurrencyId CURRENCY_RWF = 74; // Rwandan Franc
+static constexpr CurrencyId CURRENCY_BIF = 75; // Burundian Franc
+static constexpr CurrencyId CURRENCY_ZMW = 76; // Zambian Kwacha
+static constexpr CurrencyId CURRENCY_BWP = 77; // Botswana Pula
+static constexpr CurrencyId CURRENCY_NAD = 78; // Namibian Dollar
+static constexpr CurrencyId CURRENCY_SZL = 79; // Swazi Lilangeni
+static constexpr CurrencyId CURRENCY_LSL = 80; // Lesotho Loti
+static constexpr CurrencyId CURRENCY_MUR = 81; // Mauritian Rupee
+static constexpr CurrencyId CURRENCY_SCR = 82; // Seychellois Rupee
+static constexpr CurrencyId CURRENCY_MGA = 83; // Malagasy Ariary
+static constexpr CurrencyId CURRENCY_AOA = 84; // Angolan Kwanza
+static constexpr CurrencyId CURRENCY_MZN = 85; // Mozambican Metical
+static constexpr CurrencyId CURRENCY_ZWL = 86; // Zimbabwean Dollar
+static constexpr CurrencyId CURRENCY_SDG = 87; // Sudanese Pound
+static constexpr CurrencyId CURRENCY_SSP = 88; // South Sudanese Pound
+static constexpr CurrencyId CURRENCY_SOS = 89; // Somali Shilling
+static constexpr CurrencyId CURRENCY_DJF = 90; // Djiboutian Franc
+static constexpr CurrencyId CURRENCY_ERN = 91; // Eritrean Nakfa
+
+// Additional Asian & Pacific Currencies
+static constexpr CurrencyId CURRENCY_MMK = 92; // Myanmar Kyat
+static constexpr CurrencyId CURRENCY_KHR = 93; // Cambodian Riel
+static constexpr CurrencyId CURRENCY_LAK = 94; // Lao Kip
+static constexpr CurrencyId CURRENCY_BND = 95; // Brunei Dollar
+static constexpr CurrencyId CURRENCY_NPR = 96; // Nepalese Rupee
+static constexpr CurrencyId CURRENCY_BTN = 97; // Bhutanese Ngultrum
+static constexpr CurrencyId CURRENCY_MVR = 98; // Maldivian Rufiyaa
+static constexpr CurrencyId CURRENCY_MNT = 99; // Mongolian Tugrik
+static constexpr CurrencyId CURRENCY_KGS = 100; // Kyrgyzstani Som
+static constexpr CurrencyId CURRENCY_TJS = 101; // Tajikistani Somoni
+static constexpr CurrencyId CURRENCY_TMT = 102; // Turkmenistani Manat
+static constexpr CurrencyId CURRENCY_UZS = 103; // Uzbekistani Som
+static constexpr CurrencyId CURRENCY_FJD = 104; // Fijian Dollar
+static constexpr CurrencyId CURRENCY_PGK = 105; // Papua New Guinean Kina
+static constexpr CurrencyId CURRENCY_WST = 106; // Samoan Tala
+static constexpr CurrencyId CURRENCY_TOP = 107; // Tongan Paʻanga
+static constexpr CurrencyId CURRENCY_VUV = 108; // Vanuatu Vatu
+static constexpr CurrencyId CURRENCY_SBD = 109; // Solomon Islands Dollar
+static constexpr CurrencyId CURRENCY_XPF = 110; // CFP Franc (French Pacific)
+
+// Additional European Currencies
+static constexpr CurrencyId CURRENCY_RSD = 111; // Serbian Dinar
+static constexpr CurrencyId CURRENCY_MKD = 112; // Macedonian Denar
+static constexpr CurrencyId CURRENCY_ALL = 113; // Albanian Lek
+static constexpr CurrencyId CURRENCY_BAM = 114; // Bosnia-Herzegovina Convertible Mark
+static constexpr CurrencyId CURRENCY_MDL = 115; // Moldovan Leu
+static constexpr CurrencyId CURRENCY_GEL = 116; // Georgian Lari
+static constexpr CurrencyId CURRENCY_AMD = 117; // Armenian Dram
+static constexpr CurrencyId CURRENCY_AZN = 118; // Azerbaijani Manat
+
+// Additional Americas Currencies
+static constexpr CurrencyId CURRENCY_GTQ = 119; // Guatemalan Quetzal
+static constexpr CurrencyId CURRENCY_HNL = 120; // Honduran Lempira
+static constexpr CurrencyId CURRENCY_NIO = 121; // Nicaraguan Córdoba
+static constexpr CurrencyId CURRENCY_CRC = 122; // Costa Rican Colón
+static constexpr CurrencyId CURRENCY_PAB = 123; // Panamanian Balboa
+static constexpr CurrencyId CURRENCY_DOP = 124; // Dominican Peso
+static constexpr CurrencyId CURRENCY_HTG = 125; // Haitian Gourde
+static constexpr CurrencyId CURRENCY_JMD = 126; // Jamaican Dollar
+static constexpr CurrencyId CURRENCY_TTD = 127; // Trinidad & Tobago Dollar
+static constexpr CurrencyId CURRENCY_BBD = 128; // Barbadian Dollar
+static constexpr CurrencyId CURRENCY_XCD = 129; // East Caribbean Dollar
+static constexpr CurrencyId CURRENCY_BOB = 130; // Bolivian Boliviano
+static constexpr CurrencyId CURRENCY_PYG = 131; // Paraguayan Guarani
+static constexpr CurrencyId CURRENCY_GYD = 132; // Guyanese Dollar
+static constexpr CurrencyId CURRENCY_SRD = 133; // Surinamese Dollar
+
+// Additional Middle East & North Africa
+static constexpr CurrencyId CURRENCY_AED_EXTRA = 134; // (Already have AED)
+static constexpr CurrencyId CURRENCY_TND_EXTRA = 135; // (Already have TND above)
+
+// Additional Currencies (Continuing expansion)
+static constexpr CurrencyId CURRENCY_GNF = 136; // Guinean Franc
+static constexpr CurrencyId CURRENCY_LRD = 137; // Liberian Dollar
+static constexpr CurrencyId CURRENCY_SLL = 138; // Sierra Leonean Leone
+static constexpr CurrencyId CURRENCY_GMD = 139; // Gambian Dalasi
+static constexpr CurrencyId CURRENCY_CVE = 140; // Cape Verdean Escudo
+static constexpr CurrencyId CURRENCY_STN = 141; // São Tomé and Príncipe Dobra
+static constexpr CurrencyId CURRENCY_GQE = 142; // Equatorial Guinean Ekwele (uses XAF)
+static constexpr CurrencyId CURRENCY_CDF = 143; // Congolese Franc
+static constexpr CurrencyId CURRENCY_MWK = 144; // Malawian Kwacha
+static constexpr CurrencyId CURRENCY_KMF = 145; // Comorian Franc
+
 // Note: Water prices are measured using the existing fiat currencies above
 // No separate water price currencies needed - water prices are measured in USD, EUR, JPY, etc.
 
