@@ -420,6 +420,69 @@ static RPCHelpMan getsupportedpairs()
     };
 }
 
+static RPCHelpMan getcrossocurrencyrate()
+{
+    return RPCHelpMan{"getcrossocurrencyrate",
+        "\nCalculate exchange rate between two O currencies via fiat currency bridge.\n",
+        {
+            {"from_o_currency", RPCArg::Type::STR, RPCArg::Optional::NO, "Source O currency code (e.g., 'OUSD')"},
+            {"to_o_currency", RPCArg::Type::STR, RPCArg::Optional::NO, "Target O currency code (e.g., 'OEUR')"},
+        },
+        RPCResult{
+            RPCResult::Type::OBJ, "", "",
+            {
+                {RPCResult::Type::STR, "from_currency", "Source O currency"},
+                {RPCResult::Type::STR, "to_currency", "Target O currency"},
+                {RPCResult::Type::NUM, "exchange_rate", "Calculated exchange rate"},
+                {RPCResult::Type::STR, "calculation_method", "Method used for calculation"},
+                {RPCResult::Type::OBJ, "components", "Rate components used in calculation",
+                    {
+                        {RPCResult::Type::NUM, "from_o_to_fiat_rate", "O currency to fiat rate"},
+                        {RPCResult::Type::NUM, "fiat_exchange_rate", "Fiat currency exchange rate"},
+                        {RPCResult::Type::NUM, "to_o_to_fiat_rate", "Target O currency to fiat rate"},
+                        {RPCResult::Type::STR, "from_fiat", "Source fiat currency"},
+                        {RPCResult::Type::STR, "to_fiat", "Target fiat currency"},
+                    }
+                },
+            }
+        },
+        RPCExamples{
+            HelpExampleCli("getcrossocurrencyrate", "\"OUSD\" \"OEUR\"")
+            + HelpExampleRpc("getcrossocurrencyrate", "\"OUSD\", \"OEUR\"")
+        },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+        {
+            std::string from_currency = request.params[0].get_str();
+            std::string to_currency = request.params[1].get_str();
+            
+            auto rate = g_currency_exchange_manager.CalculateOCurrencyExchangeRate(from_currency, to_currency);
+            
+            UniValue result(UniValue::VOBJ);
+            result.pushKV("from_currency", from_currency);
+            result.pushKV("to_currency", to_currency);
+            
+            if (rate.has_value()) {
+                result.pushKV("exchange_rate", rate.value());
+                result.pushKV("calculation_method", "Cross-O currency via fiat bridge");
+                
+                // Add calculation components
+                UniValue components(UniValue::VOBJ);
+                std::string from_fiat = g_currency_exchange_manager.GetCorrespondingFiatCurrency(from_currency);
+                std::string to_fiat = g_currency_exchange_manager.GetCorrespondingFiatCurrency(to_currency);
+                
+                components.pushKV("from_fiat", from_fiat);
+                components.pushKV("to_fiat", to_fiat);
+                result.pushKV("components", components);
+            } else {
+                result.pushKV("exchange_rate", UniValue::VNULL);
+                result.pushKV("error", "Unable to calculate cross-O currency exchange rate");
+            }
+            
+            return result;
+        }
+    };
+}
+
 void RegisterOCurrencyExchangeRPCCommands(CRPCTable& t)
 {
     static const CRPCCommand commands[] = {
@@ -430,6 +493,7 @@ void RegisterOCurrencyExchangeRPCCommands(CRPCTable& t)
         {"exchange", &getexchangehistory},
         {"exchange", &getexchangestatistics},
         {"exchange", &getsupportedpairs},
+        {"exchange", &getcrossocurrencyrate},
     };
     
     for (const auto& c : commands) {

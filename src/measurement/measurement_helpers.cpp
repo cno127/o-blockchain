@@ -292,6 +292,248 @@ void MeasurementSystem::StoreDailyAverage(const DailyAverage& avg)
 {
     std::string key = avg.currency_code + "_" + avg.date;
     m_daily_averages[key] = avg;
+    
+    LogPrintf("O Measurement: Stored daily average for %s on %s - "
+              "Water price: %.4f, Exchange rate: %.4f, Measurements: %d, Stable: %s\n",
+              avg.currency_code.c_str(), avg.date.c_str(), avg.avg_water_price,
+              avg.avg_exchange_rate, avg.measurement_count, avg.is_stable ? "YES" : "NO");
+}
+
+void MeasurementSystem::CalculateDailyAverages(int height) {
+    int64_t current_time = GetTime();
+    std::string today = FormatDate(current_time);
+    
+    LogPrintf("O Measurement: Calculating daily averages for %s at height %d\n", 
+              today.c_str(), height);
+    
+    // Get all supported currencies
+    std::vector<std::string> currencies = {
+        "OUSD", "OEUR", "OJPY", "OGBP", "OCNY", "OCAD", "OAUD", "OCHF", "ONZD",
+        "OSEK", "ONOK", "ODKK", "OPLN", "OCZK", "OHUF", "OKRW", "OSGD", "OHKD",
+        "OTWD", "OTHB", "OMYR", "OIDR", "OPHP", "OVND", "OINR", "OBRL", "ORUB",
+        "OZAR", "OTRY", "OEGP", "OSAR", "OAED", "OILS", "OQAR", "OKWD", "OBHD",
+        "OOMR", "OJOD", "OLBP", "OMAD", "OTND", "ODZD", "OMRO", "OLYD", "OXOF",
+        "OXAF", "OXPF", "OALL", "OAMD", "OAZN", "OBYN", "OBGN", "OBIF", "OKHR",
+        "OKGS", "OKZT", "OLAK", "OLSL", "OLTL", "OMDL", "OMKD", "OMNT", "ORON",
+        "ORSD", "OTJS", "OTMT", "OUAH", "OUZS", "OXDR", "OZWL"
+    };
+    
+    for (const auto& currency : currencies) {
+        CalculateDailyAverageForCurrency(currency, today, height);
+    }
+}
+
+void MeasurementSystem::CalculateDailyAverageForCurrency(const std::string& currency, 
+                                                        const std::string& date, 
+                                                        int height) {
+    // Calculate daily average water price
+    auto water_price_avg = GetDailyAverageWaterPriceInternal(currency, date);
+    
+    // Calculate daily average exchange rate (O currency to corresponding fiat)
+    double exchange_rate_avg = 0.0;
+    if (IsOCurrency(currency)) {
+        std::string fiat_currency = GetCorrespondingFiatCurrency(currency);
+        auto exchange_avg = GetDailyAverageExchangeRateInternal(currency, fiat_currency, date);
+        if (exchange_avg.has_value()) {
+            exchange_rate_avg = exchange_avg.value();
+        }
+    }
+    
+    // Determine if currency is stable
+    bool is_stable = true;
+    if (IsOCurrency(currency)) {
+        is_stable = IsOCurrencyStable(currency, exchange_rate_avg);
+    }
+    
+    // Create daily average record
+    DailyAverage daily_avg;
+    daily_avg.currency_code = currency;
+    daily_avg.date = date;
+    daily_avg.avg_water_price = water_price_avg.value_or(0.0);
+    daily_avg.avg_exchange_rate = exchange_rate_avg;
+    daily_avg.measurement_count = GetDailyMeasurementCount(currency, date);
+    daily_avg.std_deviation = CalculateDailyStandardDeviation(currency, date);
+    daily_avg.is_stable = is_stable;
+    daily_avg.block_height = height;
+    
+    // Store the daily average
+    StoreDailyAverage(daily_avg);
+}
+
+std::optional<double> MeasurementSystem::GetDailyAverageWaterPrice(const std::string& currency, const std::string& date) const {
+    auto daily_avg = GetDailyAverage(currency, date);
+    if (daily_avg.has_value()) {
+        return daily_avg->avg_water_price;
+    }
+    return std::nullopt;
+}
+
+std::optional<double> MeasurementSystem::GetDailyAverageExchangeRate(const std::string& o_currency, const std::string& date) const {
+    if (!IsOCurrency(o_currency)) {
+        return std::nullopt;
+    }
+    
+    auto daily_avg = GetDailyAverage(o_currency, date);
+    if (daily_avg.has_value()) {
+        return daily_avg->avg_exchange_rate;
+    }
+    return std::nullopt;
+}
+
+std::vector<DailyAverage> MeasurementSystem::GetDailyAveragesInRange(const std::string& currency, 
+                                                                     const std::string& start_date, 
+                                                                     const std::string& end_date) const {
+    std::vector<DailyAverage> results;
+    
+    // Simple implementation - in practice, you'd parse dates and iterate through date range
+    for (const auto& [key, daily_avg] : m_daily_averages) {
+        if (daily_avg.currency_code == currency && 
+            daily_avg.date >= start_date && 
+            daily_avg.date <= end_date) {
+            results.push_back(daily_avg);
+        }
+    }
+    
+    // Sort by date
+    std::sort(results.begin(), results.end(), 
+              [](const DailyAverage& a, const DailyAverage& b) {
+                  return a.date < b.date;
+              });
+    
+    return results;
+}
+
+// Helper functions for daily average calculations
+
+std::optional<double> MeasurementSystem::GetDailyAverageWaterPriceInternal(const std::string& currency, const std::string& date) const {
+    // Parse date to get start and end timestamps for the day
+    int64_t start_time = ParseDateToTimestamp(date);
+    int64_t end_time = start_time + 24 * 3600 - 1; // End of day
+    
+    std::vector<WaterPriceMeasurement> measurements = GetWaterPricesInRange(currency, start_time, end_time);
+    
+    if (measurements.empty()) {
+        return std::nullopt;
+    }
+    
+    std::vector<double> prices;
+    for (const auto& m : measurements) {
+        if (m.is_validated) {
+            prices.push_back(static_cast<double>(m.price) / 100.0); // Convert from cents
+        }
+    }
+    
+    if (prices.empty()) {
+        return std::nullopt;
+    }
+    
+    return CalculateGaussianAverage(prices);
+}
+
+std::optional<double> MeasurementSystem::GetDailyAverageExchangeRateInternal(const std::string& from_currency, const std::string& to_currency, const std::string& date) const {
+    // Parse date to get start and end timestamps for the day
+    int64_t start_time = ParseDateToTimestamp(date);
+    int64_t end_time = start_time + 24 * 3600 - 1; // End of day
+    
+    std::vector<ExchangeRateMeasurement> measurements = GetExchangeRatesInRange(from_currency, to_currency, start_time, end_time);
+    
+    if (measurements.empty()) {
+        return std::nullopt;
+    }
+    
+    std::vector<double> rates;
+    for (const auto& m : measurements) {
+        if (m.is_validated) {
+            rates.push_back(m.exchange_rate);
+        }
+    }
+    
+    if (rates.empty()) {
+        return std::nullopt;
+    }
+    
+    return CalculateGaussianAverage(rates);
+}
+
+int MeasurementSystem::GetDailyMeasurementCount(const std::string& currency, const std::string& date) const {
+    int64_t start_time = ParseDateToTimestamp(date);
+    int64_t end_time = start_time + 24 * 3600 - 1;
+    
+    std::vector<WaterPriceMeasurement> water_measurements = GetWaterPricesInRange(currency, start_time, end_time);
+    
+    int count = 0;
+    for (const auto& m : water_measurements) {
+        if (m.is_validated) count++;
+    }
+    
+    // Add exchange rate measurements if it's an O currency
+    if (IsOCurrency(currency)) {
+        std::string fiat_currency = GetCorrespondingFiatCurrency(currency);
+        std::vector<ExchangeRateMeasurement> exchange_measurements = GetExchangeRatesInRange(currency, fiat_currency, start_time, end_time);
+        
+        for (const auto& m : exchange_measurements) {
+            if (m.is_validated) count++;
+        }
+    }
+    
+    return count;
+}
+
+double MeasurementSystem::CalculateDailyStandardDeviation(const std::string& currency, const std::string& date) const {
+    int64_t start_time = ParseDateToTimestamp(date);
+    int64_t end_time = start_time + 24 * 3600 - 1;
+    
+    std::vector<WaterPriceMeasurement> measurements = GetWaterPricesInRange(currency, start_time, end_time);
+    
+    if (measurements.empty()) {
+        return 0.0;
+    }
+    
+    std::vector<double> prices;
+    for (const auto& m : measurements) {
+        if (m.is_validated) {
+            prices.push_back(static_cast<double>(m.price) / 100.0);
+        }
+    }
+    
+    if (prices.size() < 2) {
+        return 0.0;
+    }
+    
+    double mean = std::accumulate(prices.begin(), prices.end(), 0.0) / prices.size();
+    return CalculateStandardDeviation(prices, mean);
+}
+
+std::string MeasurementSystem::FormatDate(int64_t timestamp) const {
+    // Simple date formatting - in practice, you'd use a proper date library
+    time_t time = static_cast<time_t>(timestamp);
+    struct tm* tm_info = gmtime(&time);
+    
+    char buffer[32];
+    strftime(buffer, sizeof(buffer), "%Y-%m-%d", tm_info);
+    return std::string(buffer);
+}
+
+int64_t MeasurementSystem::ParseDateToTimestamp(const std::string& date) const {
+    // Simple date parsing - in practice, you'd use a proper date library
+    // Format: YYYY-MM-DD
+    if (date.length() != 10 || date[4] != '-' || date[7] != '-') {
+        return 0;
+    }
+    
+    int year = std::stoi(date.substr(0, 4));
+    int month = std::stoi(date.substr(5, 2));
+    int day = std::stoi(date.substr(8, 2));
+    
+    struct tm tm = {};
+    tm.tm_year = year - 1900;
+    tm.tm_mon = month - 1;
+    tm.tm_mday = day;
+    tm.tm_hour = 0;
+    tm.tm_min = 0;
+    tm.tm_sec = 0;
+    
+    return static_cast<int64_t>(timegm(&tm));
 }
 
 CAmount MeasurementSystem::CalculateReward(MeasurementType type, double user_reputation) const
@@ -818,6 +1060,102 @@ void MeasurementSystem::ProcessOOnlyCurrencyMeasurement(const std::string& curre
     LogPrintf("O Measurement: O_ONLY currency %s measurement processed - "
               "Water price: %.3f O, Exchange rate: 1.000 (fixed)\n",
               currency.c_str(), water_price_in_o_coin);
+}
+
+// ===== O Currency ↔ Fiat Currency Validation =====
+
+bool MeasurementSystem::IsValidOCurrencyToFiatPair(const std::string& o_currency, const std::string& fiat_currency) const {
+    if (!IsOCurrency(o_currency)) {
+        return false; // First currency must be an O currency
+    }
+    
+    std::string expected_fiat = GetCorrespondingFiatCurrency(o_currency);
+    return expected_fiat == fiat_currency;
+}
+
+std::string MeasurementSystem::GetCorrespondingFiatCurrency(const std::string& o_currency) const {
+    if (!IsOCurrency(o_currency)) {
+        return ""; // Not an O currency
+    }
+    return RemoveOPrefix(o_currency);
+}
+
+std::string MeasurementSystem::GetCorrespondingOCurrency(const std::string& fiat_currency) const {
+    return AddOPrefix(fiat_currency);
+}
+
+bool MeasurementSystem::IsOCurrency(const std::string& currency) const {
+    return currency.length() > 1 && currency[0] == 'O' && std::isupper(currency[1]);
+}
+
+std::string MeasurementSystem::RemoveOPrefix(const std::string& o_currency) const {
+    if (IsOCurrency(o_currency)) {
+        return o_currency.substr(1); // Remove 'O' prefix
+    }
+    return o_currency;
+}
+
+std::string MeasurementSystem::AddOPrefix(const std::string& fiat_currency) const {
+    return "O" + fiat_currency;
+}
+
+// ===== Water Price Stability Validation =====
+
+bool MeasurementSystem::IsOCurrencyStable(const std::string& o_currency, double measured_exchange_rate) const {
+    double deviation = CalculateStabilityDeviation(o_currency, measured_exchange_rate);
+    const double STABILITY_THRESHOLD = 0.10; // 10% tolerance
+    
+    bool is_stable = deviation <= STABILITY_THRESHOLD;
+    
+    LogPrintf("O Stability: Currency %s, Measured rate: %.4f, Theoretical rate: %.4f, "
+              "Deviation: %.2f%%, Stable: %s\n",
+              o_currency.c_str(), measured_exchange_rate, GetTheoreticalExchangeRate(o_currency),
+              deviation * 100.0, is_stable ? "YES" : "NO");
+    
+    return is_stable;
+}
+
+double MeasurementSystem::GetTheoreticalExchangeRate(const std::string& o_currency) const {
+    // For O currencies, the theoretical exchange rate is based on water price in the fiat currency
+    // If 1 liter of water costs $1.20 USD, then 1 OUSD should equal $1.20 USD
+    // If 1 liter of water costs €0.95 EUR, then 1 OEUR should equal €0.95 EUR
+    
+    if (!IsOCurrency(o_currency)) {
+        return 1.0; // Not an O currency
+    }
+    
+    // Get the corresponding fiat currency
+    std::string fiat_currency = GetCorrespondingFiatCurrency(o_currency);
+    
+    // Get the average water price in the fiat currency
+    auto water_price_avg = GetAverageWaterPrice(fiat_currency, 7); // Last 7 days
+    
+    if (water_price_avg.has_value()) {
+        double theoretical_rate = water_price_avg.value();
+        
+        LogPrintf("O Stability: Theoretical exchange rate for %s/%s = %.4f "
+                  "(based on water price: %.4f %s per liter)\n",
+                  o_currency.c_str(), fiat_currency.c_str(), theoretical_rate,
+                  water_price_avg.value(), fiat_currency.c_str());
+        
+        return theoretical_rate;
+    }
+    
+    // Fallback: if no water price data available, assume 1:1
+    LogPrintf("O Stability: No water price data for %s, using fallback 1:1 rate\n", 
+              fiat_currency.c_str());
+    return 1.0;
+}
+
+double MeasurementSystem::CalculateStabilityDeviation(const std::string& o_currency, double measured_rate) const {
+    double theoretical_rate = GetTheoreticalExchangeRate(o_currency);
+    
+    if (theoretical_rate == 0) {
+        return 1.0; // 100% deviation if theoretical rate is 0
+    }
+    
+    double deviation = std::abs(measured_rate - theoretical_rate) / theoretical_rate;
+    return deviation;
 }
 
 } // namespace OMeasurement

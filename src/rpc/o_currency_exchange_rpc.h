@@ -24,5 +24,6 @@ UniValue validateexchangerate(const JSONRPCRequest& request);
 UniValue getexchangehistory(const JSONRPCRequest& request);
 UniValue getexchangestatistics(const JSONRPCRequest& request);
 UniValue getsupportedpairs(const JSONRPCRequest& request);
+UniValue getcrossocurrencyrate(const JSONRPCRequest& request);
 
 #endif // BITCOIN_RPC_O_CURRENCY_EXCHANGE_RPC_H

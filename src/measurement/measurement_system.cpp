@@ -145,12 +145,28 @@ std::vector<WaterPriceMeasurement> MeasurementSystem::GetWaterPricesInRange(
 uint256 MeasurementSystem::SubmitExchangeRate(const ExchangeRateMeasurement& measurement)
 {
     if (measurement.measurement_id.IsNull()) {
+        LogPrintf("O Measurement: Invalid measurement ID for exchange rate submission\n");
         return uint256();
     }
     
     if (!IsInviteValid(measurement.invite_id, measurement.timestamp)) {
+        LogPrintf("O Measurement: Invalid invite for exchange rate submission\n");
         return uint256();
     }
+    
+    // Validate that this is an O currency to corresponding fiat currency pair
+    if (!IsValidOCurrencyToFiatPair(measurement.from_currency, measurement.to_currency)) {
+        LogPrintf("O Measurement: Invalid currency pair %s/%s - must be O currency to corresponding fiat currency\n",
+                  measurement.from_currency.c_str(), measurement.to_currency.c_str());
+        return uint256();
+    }
+    
+    // Check stability of the O currency
+    bool is_stable = IsOCurrencyStable(measurement.from_currency, measurement.exchange_rate);
+    
+    LogPrintf("O Measurement: Exchange rate submission for %s/%s - Rate: %.4f, Stable: %s\n",
+              measurement.from_currency.c_str(), measurement.to_currency.c_str(),
+              measurement.exchange_rate, is_stable ? "YES" : "NO");
     
     m_exchange_rates[measurement.measurement_id] = measurement;
     MarkInviteUsed(measurement.invite_id);

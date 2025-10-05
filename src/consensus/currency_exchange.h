@@ -151,6 +151,24 @@ public:
     /** Get supported currency pairs */
     std::vector<std::pair<std::string, std::string>> GetSupportedPairs() const;
     
+    // ===== Cross-O Currency Exchange Rate Calculation =====
+    
+    /** Calculate exchange rate between two O currencies via fiat currency bridge */
+    std::optional<double> CalculateOCurrencyExchangeRate(
+        const std::string& from_o_currency,
+        const std::string& to_o_currency) const;
+    
+    /** Get fiat exchange rate between two fiat currencies */
+    std::optional<double> GetFiatExchangeRate(
+        const std::string& from_fiat,
+        const std::string& to_fiat) const;
+    
+    /** Check if currency is an O currency */
+    bool IsOCurrency(const std::string& currency) const;
+    
+    /** Get corresponding fiat currency for O currency */
+    std::string GetCorrespondingFiatCurrency(const std::string& o_currency) const;
+    
     // ===== Data Management =====
     
     /** Prune old exchange data */

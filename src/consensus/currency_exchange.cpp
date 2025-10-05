@@ -170,6 +170,21 @@ std::optional<double> CurrencyExchangeManager::GetCurrentExchangeRate(
     const std::string& from_currency,
     const std::string& to_currency) const {
     
+    // If both are O currencies, calculate cross-O rate
+    if (IsOCurrency(from_currency) && IsOCurrency(to_currency)) {
+        return CalculateOCurrencyExchangeRate(from_currency, to_currency);
+    }
+    
+    // If one is O currency and one is fiat, validate the pair
+    if (IsOCurrency(from_currency) && !IsOCurrency(to_currency)) {
+        // Validate O currency to corresponding fiat currency pair
+        if (!OMeasurement::g_measurement_system.IsValidOCurrencyToFiatPair(from_currency, to_currency)) {
+            LogPrintf("O Exchange: Invalid currency pair %s/%s - must be O currency to corresponding fiat\n",
+                      from_currency.c_str(), to_currency.c_str());
+            return std::nullopt;
+        }
+    }
+    
     // Try to get from measurement system first
     auto measured_rate = OMeasurement::g_measurement_system.GetAverageExchangeRate(
         from_currency, to_currency, 7); // Last 7 days
@@ -441,4 +456,114 @@ std::vector<std::string> CurrencyExchangeManager::GetSupportedCurrencies() const
         "OKGS", "OKZT", "OLAK", "OLSL", "OLTL", "OMDL", "OMKD", "OMNT", "ORON",
         "ORSD", "OTJS", "OTMT", "OUAH", "OUZS", "OXDR", "OZWL"
     };
+}
+
+// ===== Cross-O Currency Exchange Rate Calculation =====
+
+std::optional<double> CurrencyExchangeManager::CalculateOCurrencyExchangeRate(
+    const std::string& from_o_currency,
+    const std::string& to_o_currency) const {
+    
+    if (!IsOCurrency(from_o_currency) || !IsOCurrency(to_o_currency)) {
+        LogPrintf("O Exchange: Both currencies must be O currencies for cross-O calculation\n");
+        return std::nullopt;
+    }
+    
+    if (from_o_currency == to_o_currency) {
+        return 1.0; // Same currency, 1:1 rate
+    }
+    
+    // Get corresponding fiat currencies
+    std::string from_fiat = GetCorrespondingFiatCurrency(from_o_currency);
+    std::string to_fiat = GetCorrespondingFiatCurrency(to_o_currency);
+    
+    // Get O currency to fiat rates (should be 1:1 if stable)
+    auto from_o_to_fiat_rate = GetCurrentExchangeRate(from_o_currency, from_fiat);
+    auto to_o_to_fiat_rate = GetCurrentExchangeRate(to_o_currency, to_fiat);
+    
+    if (!from_o_to_fiat_rate.has_value() || !to_o_to_fiat_rate.has_value()) {
+        LogPrintf("O Exchange: Missing O currency to fiat rates for cross-O calculation\n");
+        return std::nullopt;
+    }
+    
+    // Get fiat exchange rate
+    auto fiat_exchange_rate = GetFiatExchangeRate(from_fiat, to_fiat);
+    if (!fiat_exchange_rate.has_value()) {
+        LogPrintf("O Exchange: Missing fiat exchange rate %s/%s\n", 
+                  from_fiat.c_str(), to_fiat.c_str());
+        return std::nullopt;
+    }
+    
+    // Calculate: OUSD/OEUR = (OUSD/USD) * (USD/EUR) / (OEUR/EUR)
+    double cross_o_rate = from_o_to_fiat_rate.value() * fiat_exchange_rate.value() / to_o_to_fiat_rate.value();
+    
+    LogPrintf("O Exchange: Cross-O rate %s/%s = %.6f "
+              "(via %s:%.4f * %s/%s:%.4f / %s:%.4f)\n",
+              from_o_currency.c_str(), to_o_currency.c_str(), cross_o_rate,
+              from_o_currency.c_str(), from_o_to_fiat_rate.value(),
+              from_fiat.c_str(), to_fiat.c_str(), fiat_exchange_rate.value(),
+              to_o_currency.c_str(), to_o_to_fiat_rate.value());
+    
+    return cross_o_rate;
+}
+
+std::optional<double> CurrencyExchangeManager::GetFiatExchangeRate(
+    const std::string& from_fiat,
+    const std::string& to_fiat) const {
+    
+    if (from_fiat == to_fiat) {
+        return 1.0;
+    }
+    
+    // Try to get from external sources (this would be implemented with real API calls)
+    // For now, return a placeholder that would come from external financial APIs
+    
+    LogPrintf("O Exchange: Getting fiat exchange rate %s/%s from external sources\n",
+              from_fiat.c_str(), to_fiat.c_str());
+    
+    // TODO: Implement actual external API calls to get real fiat exchange rates
+    // This would typically call services like:
+    // - CoinGecko API
+    // - Fixer.io
+    // - ExchangeRate-API
+    // - Central bank APIs
+    
+    // Placeholder implementation
+    std::map<std::string, double> placeholder_rates = {
+        {"USD_EUR", 0.85},
+        {"EUR_USD", 1.18},
+        {"USD_JPY", 110.0},
+        {"JPY_USD", 0.0091},
+        {"USD_GBP", 0.73},
+        {"GBP_USD", 1.37},
+        {"EUR_JPY", 129.4},
+        {"JPY_EUR", 0.0077},
+        {"EUR_GBP", 0.86},
+        {"GBP_EUR", 1.16},
+        {"USD_CAD", 1.25},
+        {"CAD_USD", 0.80},
+        {"USD_AUD", 1.35},
+        {"AUD_USD", 0.74}
+    };
+    
+    std::string rate_key = from_fiat + "_" + to_fiat;
+    auto it = placeholder_rates.find(rate_key);
+    if (it != placeholder_rates.end()) {
+        return it->second;
+    }
+    
+    LogPrintf("O Exchange: No fiat exchange rate available for %s/%s\n",
+              from_fiat.c_str(), to_fiat.c_str());
+    return std::nullopt;
+}
+
+bool CurrencyExchangeManager::IsOCurrency(const std::string& currency) const {
+    return currency.length() > 1 && currency[0] == 'O' && std::isupper(currency[1]);
+}
+
+std::string CurrencyExchangeManager::GetCorrespondingFiatCurrency(const std::string& o_currency) const {
+    if (IsOCurrency(o_currency)) {
+        return o_currency.substr(1); // Remove 'O' prefix
+    }
+    return o_currency;
 }

@@ -275,8 +275,39 @@ public:
     
     /** Process O_ONLY currency measurement (water price in O coin) */
     void ProcessOOnlyCurrencyMeasurement(const std::string& currency,
-                                        double water_price_in_o_coin,
-                                        int height);
+                                       double water_price_in_o_coin,
+                                       int height);
+    
+    // ===== O Currency ↔ Fiat Currency Validation =====
+    
+    /** Validate if currency pair is correct (O currency to its corresponding fiat) */
+    bool IsValidOCurrencyToFiatPair(const std::string& o_currency, const std::string& fiat_currency) const;
+    
+    /** Get corresponding fiat currency for an O currency */
+    std::string GetCorrespondingFiatCurrency(const std::string& o_currency) const;
+    
+    /** Get corresponding O currency for a fiat currency */
+    std::string GetCorrespondingOCurrency(const std::string& fiat_currency) const;
+    
+    /** Check if currency is an O currency (prefixed with 'O') */
+    bool IsOCurrency(const std::string& currency) const;
+    
+    /** Remove 'O' prefix from O currency to get fiat currency */
+    std::string RemoveOPrefix(const std::string& o_currency) const;
+    
+    /** Add 'O' prefix to fiat currency to get O currency */
+    std::string AddOPrefix(const std::string& fiat_currency) const;
+    
+    // ===== Water Price Stability Validation =====
+    
+    /** Check if O currency is stable based on water price comparison */
+    bool IsOCurrencyStable(const std::string& o_currency, double measured_exchange_rate) const;
+    
+    /** Get theoretical exchange rate based on water price (should be 1:1) */
+    double GetTheoreticalExchangeRate(const std::string& o_currency) const;
+    
+    /** Calculate stability deviation percentage */
+    double CalculateStabilityDeviation(const std::string& o_currency, double measured_rate) const;
     
     /** Calculate Gaussian average (excludes outliers) */
     double CalculateGaussianAverage(const std::vector<double>& values) const;
@@ -290,6 +321,32 @@ public:
     /** Store daily average */
     void StoreDailyAverage(const DailyAverage& avg);
     
+    /** Calculate and store daily averages for all currencies */
+    void CalculateDailyAverages(int height);
+    
+    /** Get daily average water price for a specific date */
+    std::optional<double> GetDailyAverageWaterPrice(const std::string& currency, const std::string& date) const;
+    
+    /** Get daily average exchange rate for O currency to fiat for a specific date */
+    std::optional<double> GetDailyAverageExchangeRate(const std::string& o_currency, const std::string& date) const;
+    
+    /** Get all daily averages for a currency in date range */
+    std::vector<DailyAverage> GetDailyAveragesInRange(const std::string& currency, 
+                                                     const std::string& start_date, 
+                                                     const std::string& end_date) const;
+
+private:
+    // Helper functions for daily average calculations
+    void CalculateDailyAverageForCurrency(const std::string& currency, const std::string& date, int height);
+    std::optional<double> GetDailyAverageWaterPriceInternal(const std::string& currency, const std::string& date) const;
+    std::optional<double> GetDailyAverageExchangeRateInternal(const std::string& from_currency, const std::string& to_currency, const std::string& date) const;
+    int GetDailyMeasurementCount(const std::string& currency, const std::string& date) const;
+    double CalculateDailyStandardDeviation(const std::string& currency, const std::string& date) const;
+    int64_t ParseDateToTimestamp(const std::string& date) const;
+    
+public:
+    /** Format timestamp to YYYY-MM-DD string */
+    std::string FormatDate(int64_t timestamp) const;
     // ===== Rewards =====
     
     /** Calculate reward for a measurement type */
@@ -352,6 +409,7 @@ private:
     double GetConversionRate(const std::string& currency_code, MeasurementType type) const;
     void UpdateConversionRate(const std::string& currency_code, MeasurementType type, bool measurement_completed);
     int CalculateInviteCountForTarget(int target_measurements, const std::string& currency_code, MeasurementType type) const;
+    
 };
 
 /** Global measurement system instance */
