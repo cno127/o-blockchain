@@ -340,6 +340,152 @@ double MeasurementSystem::CalculateStandardDeviation(const std::vector<double>& 
     return std::sqrt(variance);
 }
 
+// ===== Dynamic Measurement Targets =====
+
+double MeasurementSystem::CalculateVolatility(MeasurementType type, const std::string& currency, int days) const
+{
+    int64_t current_time = GetTime();
+    int64_t start_time = current_time - (days * 24 * 3600);
+    
+    std::vector<double> values;
+    
+    if (type == MeasurementType::WATER_PRICE || type == MeasurementType::WATER_PRICE_OFFLINE_VALIDATION) {
+        std::vector<WaterPriceMeasurement> measurements = GetWaterPricesInRange(currency, start_time, current_time);
+        for (const auto& m : measurements) {
+            if (m.is_validated) {
+                values.push_back(static_cast<double>(m.price) / 100.0);
+            }
+        }
+    } else if (type == MeasurementType::EXCHANGE_RATE || type == MeasurementType::EXCHANGE_RATE_OFFLINE_VALIDATION) {
+        // For exchange rates, we need to determine the currency pair
+        if (IsOCurrency(currency)) {
+            std::string fiat_currency = GetCorrespondingFiatCurrency(currency);
+            std::vector<ExchangeRateMeasurement> measurements = GetExchangeRatesInRange(currency, fiat_currency, start_time, current_time);
+            for (const auto& m : measurements) {
+                if (m.is_validated) {
+                    values.push_back(m.exchange_rate);
+                }
+            }
+        }
+    }
+    
+    if (values.size() < 2) {
+        return 0.0; // Not enough data to calculate volatility
+    }
+    
+    // Calculate coefficient of variation (standard deviation / mean)
+    double mean = std::accumulate(values.begin(), values.end(), 0.0) / values.size();
+    if (mean == 0.0) {
+        return 0.0;
+    }
+    
+    double std_dev = CalculateStandardDeviation(values);
+    return std_dev / mean; // Coefficient of variation
+}
+
+bool MeasurementSystem::IsEarlyStage(MeasurementType type, const std::string& currency) const
+{
+    int64_t current_time = GetTime();
+    int64_t early_stage_cutoff = current_time - (Config::EARLY_STAGE_DAYS * 24 * 3600);
+    
+    int total_measurements = 0;
+    
+    if (type == MeasurementType::WATER_PRICE || type == MeasurementType::WATER_PRICE_OFFLINE_VALIDATION) {
+        std::vector<WaterPriceMeasurement> measurements = GetWaterPricesInRange(currency, 0, current_time);
+        for (const auto& m : measurements) {
+            if (m.timestamp >= early_stage_cutoff && m.is_validated) {
+                total_measurements++;
+            }
+        }
+    } else if (type == MeasurementType::EXCHANGE_RATE || type == MeasurementType::EXCHANGE_RATE_OFFLINE_VALIDATION) {
+        if (IsOCurrency(currency)) {
+            std::string fiat_currency = GetCorrespondingFiatCurrency(currency);
+            std::vector<ExchangeRateMeasurement> measurements = GetExchangeRatesInRange(currency, fiat_currency, 0, current_time);
+            for (const auto& m : measurements) {
+                if (m.timestamp >= early_stage_cutoff && m.is_validated) {
+                    total_measurements++;
+                }
+            }
+        }
+    }
+    
+    // Consider early stage if we have less than 100 validated measurements in the last 30 days
+    return total_measurements < 100;
+}
+
+int MeasurementSystem::CalculateDynamicMeasurementTarget(MeasurementType type, const std::string& currency) const
+{
+    // Check if we're in early stage (scarce data)
+    if (IsEarlyStage(type, currency)) {
+        LogPrintf("O Measurement: Currency %s is in early stage - using high target %d\n", 
+                  currency.c_str(), Config::EARLY_STAGE_TARGET);
+        return Config::EARLY_STAGE_TARGET;
+    }
+    
+    // Calculate volatility over the lookback period
+    double volatility = CalculateVolatility(type, currency, Config::VOLATILITY_LOOKBACK_DAYS);
+    
+    int target;
+    if (volatility >= Config::HIGH_VOLATILITY_THRESHOLD) {
+        // High volatility - need more measurements for confidence
+        target = Config::VOLATILE_TARGET;
+        LogPrintf("O Measurement: Currency %s has high volatility (%.3f) - using volatile target %d\n", 
+                  currency.c_str(), volatility, target);
+    } else if (volatility <= Config::LOW_VOLATILITY_THRESHOLD) {
+        // Low volatility - can use fewer measurements
+        target = Config::STABLE_TARGET;
+        LogPrintf("O Measurement: Currency %s has low volatility (%.3f) - using stable target %d\n", 
+                  currency.c_str(), volatility, target);
+    } else {
+        // Medium volatility - interpolate between stable and volatile targets
+        double ratio = (volatility - Config::LOW_VOLATILITY_THRESHOLD) / 
+                      (Config::HIGH_VOLATILITY_THRESHOLD - Config::LOW_VOLATILITY_THRESHOLD);
+        target = static_cast<int>(Config::STABLE_TARGET + 
+                                 ratio * (Config::VOLATILE_TARGET - Config::STABLE_TARGET));
+        LogPrintf("O Measurement: Currency %s has medium volatility (%.3f) - using interpolated target %d\n", 
+                  currency.c_str(), volatility, target);
+    }
+    
+    // Apply minimum and maximum bounds
+    target = std::max(Config::MIN_DAILY_MEASUREMENTS, target);
+    target = std::min(Config::MAX_DAILY_MEASUREMENTS, target);
+    
+    LogPrintf("O Measurement: Final dynamic target for %s: %d (volatility: %.3f)\n", 
+              currency.c_str(), target, volatility);
+    
+    return target;
+}
+
+int MeasurementSystem::GetCurrentMeasurementTarget(MeasurementType type, const std::string& currency) const
+{
+    return CalculateDynamicMeasurementTarget(type, currency);
+}
+
+std::map<std::string, int> MeasurementSystem::GetMeasurementTargetStatistics() const
+{
+    std::map<std::string, int> stats;
+    
+    // Get all supported currencies
+    std::vector<std::string> currencies = {
+        "USD", "EUR", "JPY", "GBP", "CNY", "CAD", "AUD", "CHF", "NZD", "SEK", "NOK", "DKK", "PLN", "CZK", "HUF", "RON", "BGN", "HRK", "RUB", "TRY", "ZAR", "BRL", "MXN", "INR", "KRW", "SGD", "HKD", "TWD", "THB", "MYR", "IDR", "PHP", "VND", "PKR", "BDT", "LKR", "NPR", "AFN", "AMD", "AZN", "BYN", "BGN", "BIF", "KHR", "KGS", "KZT", "LAK", "LSL", "LTL", "MDL", "MKD", "MNT", "RON", "RSD", "TJS", "TMT", "UAH", "UZS", "XDR", "ZWL"
+    };
+    
+    for (const auto& currency : currencies) {
+        // Water price targets
+        std::string water_key = "water_price_" + currency;
+        stats[water_key] = CalculateDynamicMeasurementTarget(MeasurementType::WATER_PRICE, currency);
+        
+        // Exchange rate targets (for O currencies)
+        std::string o_currency = "O" + currency;
+        if (IsOCurrency(o_currency)) {
+            std::string exchange_key = "exchange_rate_" + o_currency;
+            stats[exchange_key] = CalculateDynamicMeasurementTarget(MeasurementType::EXCHANGE_RATE, o_currency);
+        }
+    }
+    
+    return stats;
+}
+
 double MeasurementSystem::GetConversionRate(MeasurementType type) const
 {
     int64_t invites_sent = 0;

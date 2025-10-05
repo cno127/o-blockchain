@@ -254,8 +254,6 @@ namespace Rewards {
 namespace Config {
     static constexpr int WATER_AVERAGE_TIME_LAPSE = 30;              // Days for water price average
     static constexpr int EXCHANGE_AVERAGE_TIME_LAPSE = 7;            // Days for exchange rate average
-    static constexpr int DAILY_WATER_MEASUREMENT_TARGET = 100;       // Target measurements per day
-    static constexpr int DAILY_EXCHANGE_MEASUREMENT_TARGET = 50;     // Target per day
     static constexpr int INVITE_EXPIRATION_DAYS = 7;                 // Invites expire after 7 days
     static constexpr int MIN_VALIDATORS_REQUIRED = 3;                // Minimum validators for confidence
     static constexpr double GAUSSIAN_STD_THRESHOLD = 2.0;            // Standard deviations for outliers
@@ -264,6 +262,17 @@ namespace Config {
     static constexpr int MIN_MEASUREMENTS_FOR_SIGNIFICANT_AVERAGE = 5;    // Minimum measurements for statistical significance
     static constexpr int MIN_MEASUREMENTS_FOR_HIGH_CONFIDENCE = 10;       // Minimum measurements for high confidence
     static constexpr int MIN_MEASUREMENTS_FOR_DAILY_AVERAGE = 3;          // Minimum measurements for daily average
+    
+    // Dynamic measurement targets
+    static constexpr int MIN_DAILY_MEASUREMENTS = 50;                // Minimum daily measurements (floor)
+    static constexpr int MAX_DAILY_MEASUREMENTS = 300;               // Maximum daily measurements (ceiling)
+    static constexpr int EARLY_STAGE_TARGET = 200;                   // Target when data is scarce (first 30 days)
+    static constexpr int STABLE_TARGET = 75;                         // Target when measurements are stable
+    static constexpr int VOLATILE_TARGET = 150;                      // Target when measurements are volatile
+    static constexpr int VOLATILITY_LOOKBACK_DAYS = 7;               // Days to look back for volatility calculation
+    static constexpr double HIGH_VOLATILITY_THRESHOLD = 0.15;        // 15% coefficient of variation = high volatility
+    static constexpr double LOW_VOLATILITY_THRESHOLD = 0.05;         // 5% coefficient of variation = low volatility
+    static constexpr int EARLY_STAGE_DAYS = 30;                      // Days considered "early stage" with scarce data
 }
 
 /** Measurement System Manager */
@@ -320,6 +329,23 @@ public:
     
     /** Get string representation of measurement type */
     std::string GetMeasurementTypeString(MeasurementType type) const;
+    
+    // ===== Dynamic Measurement Targets =====
+    
+    /** Calculate dynamic measurement target based on volatility and data availability */
+    int CalculateDynamicMeasurementTarget(MeasurementType type, const std::string& currency) const;
+    
+    /** Calculate volatility (coefficient of variation) for measurements */
+    double CalculateVolatility(MeasurementType type, const std::string& currency, int days) const;
+    
+    /** Check if currency is in early stage (scarce data) */
+    bool IsEarlyStage(MeasurementType type, const std::string& currency) const;
+    
+    /** Get current measurement target for a currency */
+    int GetCurrentMeasurementTarget(MeasurementType type, const std::string& currency) const;
+    
+    /** Get measurement target statistics */
+    std::map<std::string, int> GetMeasurementTargetStatistics() const;
     
     /** Check if invite is valid */
     bool IsInviteValid(const uint256& invite_id, int64_t current_time) const;

@@ -25,4 +25,9 @@ UniValue getaveragewaterpricewithconfidence(const JSONRPCRequest& request);
 UniValue getaverageexchangeratewithconfidence(const JSONRPCRequest& request);
 UniValue getdailyaveragewithconfidence(const JSONRPCRequest& request);
 
+// Dynamic measurement target RPC commands
+UniValue getdynamicmeasurementtarget(const JSONRPCRequest& request);
+UniValue getmeasurementvolatility(const JSONRPCRequest& request);
+UniValue getmeasurementtargetstatistics(const JSONRPCRequest& request);
+
 #endif // BITCOIN_RPC_O_MEASUREMENT_RPC_H

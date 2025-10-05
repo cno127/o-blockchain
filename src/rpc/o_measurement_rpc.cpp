@@ -74,7 +74,7 @@ static RPCHelpMan submitwaterprice()
             
             // Calculate reward
             CAmount reward = g_measurement_system.CalculateReward(MeasurementType::WATER_PRICE, 1.0);
-            
+
             UniValue result(UniValue::VOBJ);
             result.pushKV("measurement_id", result_id.GetHex());
             result.pushKV("status", "submitted");
@@ -132,7 +132,7 @@ static RPCHelpMan validatemeasurement()
             } else if (type_str == "exchange") {
                 success = g_measurement_system.ValidateExchangeRate(measurement_id, validator);
                 
-                if (success) {
+            if (success) {
                     auto measurement = g_measurement_system.GetExchangeRateMeasurement(measurement_id);
                     if (measurement.has_value()) {
                         validator_count = measurement->validators.size();
@@ -151,7 +151,7 @@ static RPCHelpMan validatemeasurement()
             result.pushKV("validator_count", validator_count);
             result.pushKV("is_validated", is_validated);
             result.pushKV("reward", UniValue(UniValue::VNUM, FormatMoney(reward)));
-            
+
             return result;
         },
     };
@@ -286,9 +286,9 @@ static RPCHelpMan createinvites()
         },
         RPCResult{
             RPCResult::Type::ARR, "", "Array of created invitations",
-            {
-                {RPCResult::Type::OBJ, "", "",
                 {
+                    {RPCResult::Type::OBJ, "", "",
+                    {
                     {RPCResult::Type::STR_HEX, "invite_id", "Invitation ID"},
                     {RPCResult::Type::STR, "type", "Invitation type"},
                     {RPCResult::Type::NUM, "expires_at", "Expiration timestamp"},
@@ -577,7 +577,7 @@ static RPCHelpMan getdailyaveragewaterprice()
             std::string date = request.params[1].get_str();
             
             auto avg = g_measurement_system.GetDailyAverageWaterPrice(currency, date);
-            
+
             UniValue result(UniValue::VOBJ);
             result.pushKV("currency", currency);
             result.pushKV("date", date);
@@ -596,7 +596,7 @@ static RPCHelpMan getdailyaveragewaterprice()
                 result.pushKV("avg_water_price", UniValue::VNULL);
                 result.pushKV("error", "No daily average data available for this currency and date");
             }
-            
+
             return result;
         }
     };
@@ -710,7 +710,7 @@ static RPCHelpMan getdailyaverages()
             std::string end_date = request.params[2].get_str();
             
             auto daily_averages = g_measurement_system.GetDailyAveragesInRange(currency, start_date, end_date);
-            
+
             UniValue result(UniValue::VOBJ);
             result.pushKV("currency", currency);
             result.pushKV("start_date", start_date);
@@ -729,7 +729,7 @@ static RPCHelpMan getdailyaverages()
             
             result.pushKV("daily_averages", averages);
             result.pushKV("count", static_cast<int64_t>(daily_averages.size()));
-            
+
             return result;
         }
     };
@@ -761,13 +761,13 @@ static RPCHelpMan calculatedailyaverages()
             int height = request.params[0].isNull() ? 100000 : request.params[0].getInt<int>();
             
             g_measurement_system.CalculateDailyAverages(height);
-            
+
             UniValue result(UniValue::VOBJ);
             result.pushKV("block_height", height);
             result.pushKV("date", g_measurement_system.FormatDate(GetTime()));
             result.pushKV("currencies_processed", static_cast<int64_t>(65)); // Number of supported currencies
             result.pushKV("status", "Daily averages calculated and stored successfully");
-            
+
             return result;
         }
     };
@@ -945,6 +945,211 @@ static RPCHelpMan getdailyaveragewithconfidence()
     };
 }
 
+static RPCHelpMan getdynamicmeasurementtarget()
+{
+    return RPCHelpMan{
+        "getdynamicmeasurementtarget",
+        "\nGet dynamic measurement target for a specific type and currency.\n",
+        {
+            {"type", RPCArg::Type::STR, RPCArg::Optional::NO, "Type: 'water' or 'exchange'"},
+            {"currency", RPCArg::Type::STR, RPCArg::Optional::NO, "Currency code (e.g., 'USD', 'OUSD')"},
+        },
+        RPCResult{
+            RPCResult::Type::OBJ, "", "",
+            {
+                {RPCResult::Type::STR, "type", "Measurement type"},
+                {RPCResult::Type::STR, "currency", "Currency code"},
+                {RPCResult::Type::NUM, "target", "Dynamic measurement target"},
+                {RPCResult::Type::NUM, "volatility", "Current volatility (coefficient of variation)"},
+                {RPCResult::Type::BOOL, "is_early_stage", "Whether currency is in early stage"},
+                {RPCResult::Type::STR, "target_reason", "Reason for the target value"},
+            }
+        },
+        RPCExamples{
+            HelpExampleCli("getdynamicmeasurementtarget", "water USD")
+            + HelpExampleCli("getdynamicmeasurementtarget", "exchange OUSD")
+            + HelpExampleRpc("getdynamicmeasurementtarget", "water USD")
+        },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+        {
+            std::string type_str = request.params[0].get_str();
+            std::string currency = request.params[1].get_str();
+            
+            MeasurementType type;
+            if (type_str == "water") {
+                type = MeasurementType::WATER_PRICE;
+            } else if (type_str == "exchange") {
+                type = MeasurementType::EXCHANGE_RATE;
+            } else {
+                throw JSONRPCError(RPC_INVALID_PARAMETER, "Type must be 'water' or 'exchange'");
+            }
+            
+            int target = g_measurement_system.GetCurrentMeasurementTarget(type, currency);
+            double volatility = g_measurement_system.CalculateVolatility(type, currency, 7);
+            bool is_early_stage = g_measurement_system.IsEarlyStage(type, currency);
+            
+            std::string reason;
+            if (is_early_stage) {
+                reason = "early_stage_high_target";
+            } else if (volatility >= 0.15) {
+                reason = "high_volatility_requires_more_measurements";
+            } else if (volatility <= 0.05) {
+                reason = "low_volatility_allows_fewer_measurements";
+            } else {
+                reason = "medium_volatility_interpolated_target";
+            }
+            
+            UniValue response(UniValue::VOBJ);
+            response.pushKV("type", type_str);
+            response.pushKV("currency", currency);
+            response.pushKV("target", target);
+            response.pushKV("volatility", volatility);
+            response.pushKV("is_early_stage", is_early_stage);
+            response.pushKV("target_reason", reason);
+            
+            return response;
+        }
+    };
+}
+
+static RPCHelpMan getmeasurementvolatility()
+{
+    return RPCHelpMan{
+        "getmeasurementvolatility",
+        "\nGet volatility information for measurements.\n",
+        {
+            {"type", RPCArg::Type::STR, RPCArg::Optional::NO, "Type: 'water' or 'exchange'"},
+            {"currency", RPCArg::Type::STR, RPCArg::Optional::NO, "Currency code (e.g., 'USD', 'OUSD')"},
+            {"days", RPCArg::Type::NUM, RPCArg::Optional::OMITTED, "Number of days to look back (default: 7)"},
+        },
+        RPCResult{
+            RPCResult::Type::OBJ, "", "",
+            {
+                {RPCResult::Type::STR, "type", "Measurement type"},
+                {RPCResult::Type::STR, "currency", "Currency code"},
+                {RPCResult::Type::NUM, "volatility", "Coefficient of variation"},
+                {RPCResult::Type::NUM, "days", "Number of days analyzed"},
+                {RPCResult::Type::STR, "volatility_level", "Volatility level: low, medium, or high"},
+                {RPCResult::Type::NUM, "measurement_count", "Number of measurements used"},
+            }
+        },
+        RPCExamples{
+            HelpExampleCli("getmeasurementvolatility", "water USD")
+            + HelpExampleCli("getmeasurementvolatility", "exchange OUSD 14")
+            + HelpExampleRpc("getmeasurementvolatility", "water USD")
+        },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+        {
+            std::string type_str = request.params[0].get_str();
+            std::string currency = request.params[1].get_str();
+            int days = request.params[2].isNull() ? 7 : request.params[2].getInt<int>();
+            
+            MeasurementType type;
+            if (type_str == "water") {
+                type = MeasurementType::WATER_PRICE;
+            } else if (type_str == "exchange") {
+                type = MeasurementType::EXCHANGE_RATE;
+            } else {
+                throw JSONRPCError(RPC_INVALID_PARAMETER, "Type must be 'water' or 'exchange'");
+            }
+            
+            double volatility = g_measurement_system.CalculateVolatility(type, currency, days);
+            
+            std::string level;
+            if (volatility <= 0.05) {
+                level = "low";
+            } else if (volatility >= 0.15) {
+                level = "high";
+            } else {
+                level = "medium";
+            }
+            
+            // Get measurement count for context
+            int64_t current_time = GetTime();
+            int64_t start_time = current_time - (days * 24 * 3600);
+            int measurement_count = 0;
+            
+            if (type == MeasurementType::WATER_PRICE) {
+                auto measurements = g_measurement_system.GetWaterPricesInRange(currency, start_time, current_time);
+                for (const auto& m : measurements) {
+                    if (m.is_validated) measurement_count++;
+                }
+            } else if (type == MeasurementType::EXCHANGE_RATE) {
+                if (g_measurement_system.IsOCurrency(currency)) {
+                    std::string fiat_currency = g_measurement_system.GetCorrespondingFiatCurrency(currency);
+                    auto measurements = g_measurement_system.GetExchangeRatesInRange(currency, fiat_currency, start_time, current_time);
+                    for (const auto& m : measurements) {
+                        if (m.is_validated) measurement_count++;
+                    }
+                }
+            }
+            
+            UniValue response(UniValue::VOBJ);
+            response.pushKV("type", type_str);
+            response.pushKV("currency", currency);
+            response.pushKV("volatility", volatility);
+            response.pushKV("days", days);
+            response.pushKV("volatility_level", level);
+            response.pushKV("measurement_count", measurement_count);
+            
+            return response;
+        }
+    };
+}
+
+static RPCHelpMan getmeasurementtargetstatistics()
+{
+    return RPCHelpMan{
+        "getmeasurementtargetstatistics",
+        "\nGet measurement target statistics for all currencies.\n",
+        {
+        },
+        RPCResult{
+            RPCResult::Type::OBJ, "", "",
+            {
+                {RPCResult::Type::OBJ, "targets", "Dynamic targets for all currencies"},
+                {RPCResult::Type::NUM, "total_currencies", "Total number of currencies tracked"},
+                {RPCResult::Type::NUM, "min_target", "Minimum target across all currencies"},
+                {RPCResult::Type::NUM, "max_target", "Maximum target across all currencies"},
+                {RPCResult::Type::NUM, "avg_target", "Average target across all currencies"},
+            }
+        },
+        RPCExamples{
+            HelpExampleCli("getmeasurementtargetstatistics")
+            + HelpExampleRpc("getmeasurementtargetstatistics")
+        },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+        {
+            auto stats = g_measurement_system.GetMeasurementTargetStatistics();
+            
+            UniValue targets(UniValue::VOBJ);
+            int min_target = INT_MAX;
+            int max_target = 0;
+            int total_targets = 0;
+            int sum_targets = 0;
+            
+            for (const auto& [key, target] : stats) {
+                targets.pushKV(key, target);
+                min_target = std::min(min_target, target);
+                max_target = std::max(max_target, target);
+                total_targets++;
+                sum_targets += target;
+            }
+            
+            double avg_target = total_targets > 0 ? static_cast<double>(sum_targets) / total_targets : 0.0;
+            
+            UniValue response(UniValue::VOBJ);
+            response.pushKV("targets", targets);
+            response.pushKV("total_currencies", total_targets);
+            response.pushKV("min_target", min_target == INT_MAX ? 0 : min_target);
+            response.pushKV("max_target", max_target);
+            response.pushKV("avg_target", avg_target);
+            
+            return response;
+        }
+    };
+}
+
 void RegisterOMeasurementRPCCommands(CRPCTable& t)
 {
     static const CRPCCommand commands[] = {
@@ -963,6 +1168,9 @@ void RegisterOMeasurementRPCCommands(CRPCTable& t)
         {"measurement", &getaveragewaterpricewithconfidence},
         {"measurement", &getaverageexchangeratewithconfidence},
         {"measurement", &getdailyaveragewithconfidence},
+        {"measurement", &getdynamicmeasurementtarget},
+        {"measurement", &getmeasurementvolatility},
+        {"measurement", &getmeasurementtargetstatistics},
     };
     
     for (const auto& c : commands) {

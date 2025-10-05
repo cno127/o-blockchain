@@ -267,7 +267,79 @@ bitcoin-cli getmeasurementrewardstats
 
 ---
 
-## 📧 **5. Enhanced Invitation System**
+## 🎯 **5. Dynamic Measurement Target System**
+
+### **Key Features**
+- **Volatility-Based Targets**: Adjusts measurement goals based on data volatility
+- **Early Stage Detection**: Higher targets when data is scarce
+- **Adaptive Algorithm**: Automatically adjusts targets based on measurement stability
+- **Minimum Floor**: Always maintains at least 50 daily measurements
+- **Maximum Ceiling**: Caps targets at 300 to prevent resource waste
+
+### **Target Calculation Algorithm**
+1. **Early Stage Check**: If < 100 validated measurements in last 30 days → Target = 200
+2. **Volatility Analysis**: Calculate coefficient of variation over last 7 days
+3. **Target Assignment**:
+   - **High Volatility** (≥15%): Target = 150 measurements
+   - **Low Volatility** (≤5%): Target = 75 measurements  
+   - **Medium Volatility**: Interpolated between 75-150
+4. **Bounds Application**: Ensure target is between 50-300
+
+### **Configuration Parameters**
+```cpp
+static constexpr int MIN_DAILY_MEASUREMENTS = 50;                // Minimum floor
+static constexpr int MAX_DAILY_MEASUREMENTS = 300;               // Maximum ceiling
+static constexpr int EARLY_STAGE_TARGET = 200;                   // High target for scarce data
+static constexpr int STABLE_TARGET = 75;                         // Low target for stable data
+static constexpr int VOLATILE_TARGET = 150;                      // High target for volatile data
+static constexpr double HIGH_VOLATILITY_THRESHOLD = 0.15;        // 15% = high volatility
+static constexpr double LOW_VOLATILITY_THRESHOLD = 0.05;         // 5% = low volatility
+```
+
+### **RPC Commands**
+```bash
+# Get dynamic measurement target for a currency
+bitcoin-cli getdynamicmeasurementtarget water USD
+bitcoin-cli getdynamicmeasurementtarget exchange OUSD
+
+# Get volatility information
+bitcoin-cli getmeasurementvolatility water USD 7
+bitcoin-cli getmeasurementvolatility exchange OUSD 14
+
+# Get target statistics for all currencies
+bitcoin-cli getmeasurementtargetstatistics
+```
+
+### **Usage Examples**
+```bash
+# Check dynamic target for water price measurements
+bitcoin-cli getdynamicmeasurementtarget water USD
+# Response:
+{
+  "type": "water",
+  "currency": "USD",
+  "target": 150,
+  "volatility": 0.18,
+  "is_early_stage": false,
+  "target_reason": "high_volatility_requires_more_measurements"
+}
+
+# Check volatility level
+bitcoin-cli getmeasurementvolatility water USD 7
+# Response:
+{
+  "type": "water",
+  "currency": "USD",
+  "volatility": 0.18,
+  "days": 7,
+  "volatility_level": "high",
+  "measurement_count": 45
+}
+```
+
+---
+
+## 📧 **6. Enhanced Invitation System**
 
 ### **Key Features**
 - **Readiness Validation**: Checks infrastructure before sending invitations
@@ -327,7 +399,7 @@ bitcoin-cli createinvites 10 water USD
 
 ---
 
-## 🔄 **6. Complete Workflow Integration**
+## 🔄 **7. Complete Workflow Integration**
 
 ### **System Startup**
 ```bash
@@ -402,7 +474,7 @@ bitcoin-cli detectcurrencydisappearance OUSD USD
 
 ---
 
-## 🎯 **7. Key Benefits of the Complete System**
+## 🎯 **8. Key Benefits of the Complete System**
 
 ### **Infrastructure Validation**
 - Ensures sufficient users and coins before starting measurements
@@ -431,7 +503,7 @@ bitcoin-cli detectcurrencydisappearance OUSD USD
 
 ---
 
-## 🚀 **8. Technical Implementation**
+## 🚀 **9. Technical Implementation**
 
 ### **Architecture Overview**
 ```
@@ -462,7 +534,7 @@ bitcoin-cli detectcurrencydisappearance OUSD USD
 
 ---
 
-## 📊 **9. RPC Command Reference**
+## 📊 **10. RPC Command Reference**
 
 ### **Exchange Rate Management**
 - `initializeexchangerates` - Initialize with theoretical rates
@@ -496,17 +568,23 @@ bitcoin-cli detectcurrencydisappearance OUSD USD
 - `getaverageexchangeratewithconfidence` - Get exchange rate average with confidence info
 - `getdailyaveragewithconfidence` - Get daily average with confidence info
 
+### **Dynamic Measurement Targets**
+- `getdynamicmeasurementtarget` - Get dynamic measurement target for currency
+- `getmeasurementvolatility` - Get volatility information for measurements
+- `getmeasurementtargetstatistics` - Get target statistics for all currencies
+
 ---
 
-## 🎉 **10. System Status**
+## 🎉 **11. System Status**
 
 ### **✅ Completed Features**
 - Enhanced Exchange Rate System with scenario distinction
 - Measurement Readiness System with start conditions
 - Statistical Significance System with confidence levels
+- Dynamic Measurement Target System with volatility-based adjustment
 - Measurement Rewards System with integrated rewards
 - Enhanced Invitation System with readiness validation
-- Comprehensive RPC interface with 25+ commands
+- Comprehensive RPC interface with 30+ commands
 - Complete integration between all systems
 - Comprehensive documentation and testing
 
