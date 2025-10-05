@@ -340,8 +340,27 @@ All water price submissions are automatically validated and converted during the
 
 ## 📝 **For Measurers and Validators**
 
+### **When You Receive an Invitation:**
+When you receive a measurement invitation, you have **TWO OPTIONS** - choose whichever is most convenient:
+
+**Option 1: ONLINE Measurement** (Lower Reward: 10.00 O)
+- Find water price on a website (e.g., walmart.com, amazon.com, local grocery store site)
+- Provide: URL + price + volume + unit
+- Quick and convenient
+
+**Option 2: OFFLINE Measurement** (Higher Reward: 100.00 O)
+- Take photo of water bottle with price tag in a physical store
+- Provide: Photo + GPS location + price + volume + unit
+- Requires physical travel but pays more
+
+**You decide which method to use based on:**
+- Your location (near a store vs at home)
+- Your time (quick URL vs store visit)
+- Your preference (privacy vs convenience)
+- Reward difference (10x more for offline)
+
 ### **When Submitting a Measurement:**
-1. Look at the water bottle/container
+1. Look at the water bottle/container (physical or online)
 2. Note the volume (e.g., "1L", "33.8 fl oz", "1000mL")
 3. Note the price
 4. Note the unit used on the label
