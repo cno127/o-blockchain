@@ -232,10 +232,10 @@ struct AverageWithConfidence {
     }
     
     void UpdateConfidenceLevel() {
-        if (measurement_count < Config::MIN_MEASUREMENTS_FOR_SIGNIFICANT_AVERAGE) {
+        if (measurement_count < 5) { // MIN_MEASUREMENTS_FOR_SIGNIFICANT_AVERAGE
             confidence_level = ConfidenceLevel::INSUFFICIENT_DATA;
             is_statistically_significant = false;
-        } else if (measurement_count < Config::MIN_MEASUREMENTS_FOR_HIGH_CONFIDENCE) {
+        } else if (measurement_count < 10) { // MIN_MEASUREMENTS_FOR_HIGH_CONFIDENCE
             confidence_level = ConfidenceLevel::LOW_CONFIDENCE;
             is_statistically_significant = true;
         } else if (measurement_count < 20) {
@@ -337,6 +337,13 @@ namespace Config {
     static constexpr int URL_VALIDATION_TIMEOUT = 10;                // 10 seconds timeout for URL validation
     static constexpr int MIN_LOCATION_LENGTH = 3;                    // Minimum location string length
     static constexpr int MAX_LOCATION_LENGTH = 200;                  // Maximum location string length
+    
+    // Automatic invitation triggers
+    static constexpr int AUTO_INVITE_CHECK_INTERVAL = 1800;          // Check every 30 minutes (1800 seconds)
+    static constexpr int AUTO_INVITE_BLOCK_INTERVAL = 10;            // Check every 10 blocks
+    static constexpr double MEASUREMENT_GAP_THRESHOLD = 0.8;         // Create invites when gap > 80% of target
+    static constexpr int MAX_AUTO_INVITES_PER_CURRENCY = 50;         // Maximum auto invites per currency per check
+    static constexpr int AUTO_INVITE_COOLDOWN = 3600;                // 1 hour cooldown between auto invites for same currency
 }
 
 /** Measurement System Manager */
@@ -435,6 +442,23 @@ public:
     /** Submit measurement with automated validation */
     uint256 SubmitMeasurementWithValidation(const WaterPriceMeasurement& measurement);
     uint256 SubmitMeasurementWithValidation(const ExchangeRateMeasurement& measurement);
+    
+    // ===== Automatic Invitation Triggers =====
+    
+    /** Check and create invitations automatically based on targets */
+    void CheckAndCreateInvitations();
+    
+    /** Monitor measurement targets for all currencies */
+    void MonitorMeasurementTargets();
+    
+    /** Check if a currency needs more measurements */
+    bool NeedsMoreMeasurements(MeasurementType type, const std::string& currency) const;
+    
+    /** Get measurement gap for a currency (target - current) */
+    int GetMeasurementGap(MeasurementType type, const std::string& currency) const;
+    
+    /** Create automatic invitations for a currency if needed */
+    void CreateAutomaticInvitations(MeasurementType type, const std::string& currency);
     
     /** Check if invite is valid */
     bool IsInviteValid(const uint256& invite_id, int64_t current_time) const;
@@ -599,6 +623,17 @@ private:
     
     // Key format: "currency_code:measurement_type" (e.g., "OUSD:0", "OEUR:1")
     std::map<std::string, ConversionRate> m_conversion_rates;
+    
+    // Automatic invitation cooldown tracking
+    struct AutoInviteCooldown {
+        int64_t last_invite_time;
+        int invites_sent;
+        
+        AutoInviteCooldown() : last_invite_time(0), invites_sent(0) {}
+    };
+    
+    // Key format: "currency_code:measurement_type" (e.g., "USD:0", "OUSD:1")
+    std::map<std::string, AutoInviteCooldown> m_auto_invite_cooldowns;
     
     // Helper functions
     double CalculateStandardDeviation(const std::vector<double>& values, double mean) const;

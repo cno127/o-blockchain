@@ -1115,8 +1115,8 @@ static RPCHelpMan getmeasurementtargetstatistics()
             }
         },
         RPCExamples{
-            HelpExampleCli("getmeasurementtargetstatistics")
-            + HelpExampleRpc("getmeasurementtargetstatistics")
+            HelpExampleCli("getmeasurementtargetstatistics", "")
+            + HelpExampleRpc("getmeasurementtargetstatistics", "")
         },
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
         {
@@ -1411,6 +1411,150 @@ static RPCHelpMan getgaussianrange()
     };
 }
 
+static RPCHelpMan checkandcreateinvitations()
+{
+    return RPCHelpMan{
+        "checkandcreateinvitations",
+        "\nCheck and create invitations automatically based on measurement targets.\n",
+        {
+        },
+        RPCResult{
+            RPCResult::Type::OBJ, "", "",
+            {
+                {RPCResult::Type::BOOL, "success", "Whether the operation was successful"},
+                {RPCResult::Type::NUM, "total_invites_created", "Total number of invitation sets created"},
+                {RPCResult::Type::STR, "message", "Status message"},
+            }
+        },
+        RPCExamples{
+            HelpExampleCli("checkandcreateinvitations", "")
+            + HelpExampleRpc("checkandcreateinvitations", "")
+        },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+        {
+            try {
+                g_measurement_system.CheckAndCreateInvitations();
+                
+                UniValue response(UniValue::VOBJ);
+                response.pushKV("success", true);
+                response.pushKV("total_invites_created", "See logs for details");
+                response.pushKV("message", "Automatic invitation check completed successfully");
+                
+                return response;
+            } catch (const std::exception& e) {
+                UniValue response(UniValue::VOBJ);
+                response.pushKV("success", false);
+                response.pushKV("total_invites_created", 0);
+                response.pushKV("message", std::string("Error: ") + e.what());
+                
+                return response;
+            }
+        }
+    };
+}
+
+static RPCHelpMan monitormeasurementtargets()
+{
+    return RPCHelpMan{
+        "monitormeasurementtargets",
+        "\nMonitor measurement targets for all currencies.\n",
+        {
+        },
+        RPCResult{
+            RPCResult::Type::OBJ, "", "",
+            {
+                {RPCResult::Type::BOOL, "success", "Whether the operation was successful"},
+                {RPCResult::Type::NUM, "currencies_needing_attention", "Number of currencies needing attention"},
+                {RPCResult::Type::STR, "message", "Status message"},
+            }
+        },
+        RPCExamples{
+            HelpExampleCli("monitormeasurementtargets", "")
+            + HelpExampleRpc("monitormeasurementtargets", "")
+        },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+        {
+            try {
+                g_measurement_system.MonitorMeasurementTargets();
+                
+                UniValue response(UniValue::VOBJ);
+                response.pushKV("success", true);
+                response.pushKV("currencies_needing_attention", "See logs for details");
+                response.pushKV("message", "Target monitoring completed successfully");
+                
+                return response;
+            } catch (const std::exception& e) {
+                UniValue response(UniValue::VOBJ);
+                response.pushKV("success", false);
+                response.pushKV("currencies_needing_attention", 0);
+                response.pushKV("message", std::string("Error: ") + e.what());
+                
+                return response;
+            }
+        }
+    };
+}
+
+static RPCHelpMan getmeasurementgap()
+{
+    return RPCHelpMan{
+        "getmeasurementgap",
+        "\nGet measurement gap for a specific currency and type.\n",
+        {
+            {"type", RPCArg::Type::STR, RPCArg::Optional::NO, "Type: 'water' or 'exchange'"},
+            {"currency", RPCArg::Type::STR, RPCArg::Optional::NO, "Currency code (e.g., 'USD', 'OUSD')"},
+        },
+        RPCResult{
+            RPCResult::Type::OBJ, "", "",
+            {
+                {RPCResult::Type::STR, "type", "Measurement type"},
+                {RPCResult::Type::STR, "currency", "Currency code"},
+                {RPCResult::Type::NUM, "target", "Target number of measurements"},
+                {RPCResult::Type::NUM, "current", "Current number of measurements"},
+                {RPCResult::Type::NUM, "gap", "Gap (target - current)"},
+                {RPCResult::Type::NUM, "gap_ratio", "Gap ratio (gap / target)"},
+                {RPCResult::Type::BOOL, "needs_more", "Whether more measurements are needed"},
+            }
+        },
+        RPCExamples{
+            HelpExampleCli("getmeasurementgap", "water USD")
+            + HelpExampleCli("getmeasurementgap", "exchange OUSD")
+            + HelpExampleRpc("getmeasurementgap", "water USD")
+        },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+        {
+            std::string type_str = request.params[0].get_str();
+            std::string currency = request.params[1].get_str();
+            
+            MeasurementType type;
+            if (type_str == "water") {
+                type = MeasurementType::WATER_PRICE;
+            } else if (type_str == "exchange") {
+                type = MeasurementType::EXCHANGE_RATE;
+            } else {
+                throw JSONRPCError(RPC_INVALID_PARAMETER, "Type must be 'water' or 'exchange'");
+            }
+            
+            int target = g_measurement_system.GetCurrentMeasurementTarget(type, currency);
+            int gap = g_measurement_system.GetMeasurementGap(type, currency);
+            int current = target - gap;
+            double gap_ratio = target > 0 ? static_cast<double>(gap) / target : 0.0;
+            bool needs_more = g_measurement_system.NeedsMoreMeasurements(type, currency);
+            
+            UniValue response(UniValue::VOBJ);
+            response.pushKV("type", type_str);
+            response.pushKV("currency", currency);
+            response.pushKV("target", target);
+            response.pushKV("current", current);
+            response.pushKV("gap", gap);
+            response.pushKV("gap_ratio", gap_ratio);
+            response.pushKV("needs_more", needs_more);
+            
+            return response;
+        }
+    };
+}
+
 void RegisterOMeasurementRPCCommands(CRPCTable& t)
 {
     static const CRPCCommand commands[] = {
@@ -1435,6 +1579,9 @@ void RegisterOMeasurementRPCCommands(CRPCTable& t)
         {"measurement", &submitwaterpricewithvalidation},
         {"measurement", &submitexchangeratewithvalidation},
         {"measurement", &getgaussianrange},
+        {"measurement", &checkandcreateinvitations},
+        {"measurement", &monitormeasurementtargets},
+        {"measurement", &getmeasurementgap},
     };
     
     for (const auto& c : commands) {

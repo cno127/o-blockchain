@@ -433,7 +433,91 @@ bitcoin-cli getgaussianrange water USD
 
 ---
 
-## 📧 **7. Enhanced Invitation System**
+## 🤖 **7. Automatic Invitation Triggers**
+
+### **Key Features**
+- **Scheduled Monitoring**: Automatic checks every 30 minutes
+- **Target-Based Triggers**: Creates invitations when measurement targets are not met
+- **Cooldown Management**: Prevents spam with 1-hour cooldown between auto invites
+- **Gap Detection**: Monitors measurement gaps and triggers when >80% of target is missing
+- **Autonomous Operation**: System runs without manual intervention
+- **Comprehensive Coverage**: Monitors all supported currencies automatically
+
+### **Trigger Mechanisms**
+1. **Scheduled Tasks**: Every 30 minutes via Bitcoin Core scheduler
+2. **Target Monitoring**: Continuous monitoring of measurement targets
+3. **Gap Analysis**: Automatic detection of measurement gaps
+4. **Cooldown Protection**: Prevents excessive invitation sending
+5. **Readiness Validation**: Ensures conditions are met before creating invitations
+
+### **Configuration Parameters**
+```cpp
+static constexpr int AUTO_INVITE_CHECK_INTERVAL = 1800;          // 30 minutes
+static constexpr int AUTO_INVITE_BLOCK_INTERVAL = 10;            // Every 10 blocks
+static constexpr double MEASUREMENT_GAP_THRESHOLD = 0.8;         // 80% gap threshold
+static constexpr int MAX_AUTO_INVITES_PER_CURRENCY = 50;         // Max per currency per check
+static constexpr int AUTO_INVITE_COOLDOWN = 3600;                // 1 hour cooldown
+```
+
+### **RPC Commands**
+```bash
+# Manually trigger automatic invitation check
+bitcoin-cli checkandcreateinvitations
+
+# Monitor measurement targets for all currencies
+bitcoin-cli monitormeasurementtargets
+
+# Get measurement gap for specific currency
+bitcoin-cli getmeasurementgap water USD
+bitcoin-cli getmeasurementgap exchange OUSD
+```
+
+### **Usage Examples**
+```bash
+# Check and create invitations automatically
+bitcoin-cli checkandcreateinvitations
+# Response:
+{
+  "success": true,
+  "total_invites_created": "See logs for details",
+  "message": "Automatic invitation check completed successfully"
+}
+
+# Monitor all measurement targets
+bitcoin-cli monitormeasurementtargets
+# Response:
+{
+  "success": true,
+  "currencies_needing_attention": "See logs for details",
+  "message": "Target monitoring completed successfully"
+}
+
+# Check measurement gap for USD water price
+bitcoin-cli getmeasurementgap water USD
+# Response:
+{
+  "type": "water",
+  "currency": "USD",
+  "target": 150,
+  "current": 45,
+  "gap": 105,
+  "gap_ratio": 0.7,
+  "needs_more": false
+}
+```
+
+### **Automatic Workflow**
+1. **Every 30 Minutes**: System automatically checks all currencies
+2. **Gap Analysis**: Calculates measurement gaps for each currency
+3. **Threshold Check**: Triggers if gap > 80% of target
+4. **Cooldown Check**: Ensures 1-hour cooldown between auto invites
+5. **Readiness Check**: Validates readiness conditions
+6. **Invitation Creation**: Creates up to 50 invitations per currency
+7. **Logging**: Comprehensive logging of all actions
+
+---
+
+## 📧 **8. Enhanced Invitation System**
 
 ### **Key Features**
 - **Readiness Validation**: Checks infrastructure before sending invitations
@@ -493,7 +577,7 @@ bitcoin-cli createinvites 10 water USD
 
 ---
 
-## 🔄 **8. Complete Workflow Integration**
+## 🔄 **9. Complete Workflow Integration**
 
 ### **System Startup**
 ```bash
@@ -568,7 +652,7 @@ bitcoin-cli detectcurrencydisappearance OUSD USD
 
 ---
 
-## 🎯 **9. Key Benefits of the Complete System**
+## 🎯 **10. Key Benefits of the Complete System**
 
 ### **Infrastructure Validation**
 - Ensures sufficient users and coins before starting measurements
@@ -597,7 +681,7 @@ bitcoin-cli detectcurrencydisappearance OUSD USD
 
 ---
 
-## 🚀 **10. Technical Implementation**
+## 🚀 **11. Technical Implementation**
 
 ### **Architecture Overview**
 ```
@@ -628,7 +712,7 @@ bitcoin-cli detectcurrencydisappearance OUSD USD
 
 ---
 
-## 📊 **11. RPC Command Reference**
+## 📊 **12. RPC Command Reference**
 
 ### **Exchange Rate Management**
 - `initializeexchangerates` - Initialize with theoretical rates
@@ -672,6 +756,11 @@ bitcoin-cli detectcurrencydisappearance OUSD USD
 - `submitexchangeratewithvalidation` - Submit exchange rate with automated validation
 - `getgaussianrange` - Get Gaussian acceptance range for currency
 
+### **Automatic Invitation Triggers**
+- `checkandcreateinvitations` - Manually trigger automatic invitation check
+- `monitormeasurementtargets` - Monitor measurement targets for all currencies
+- `getmeasurementgap` - Get measurement gap for specific currency
+
 ---
 
 ## 🎉 **12. System Status**
@@ -682,9 +771,10 @@ bitcoin-cli detectcurrencydisappearance OUSD USD
 - Statistical Significance System with confidence levels
 - Dynamic Measurement Target System with volatility-based adjustment
 - Automated Validation System with Gaussian range filtering
+- Automatic Invitation Triggers with scheduled monitoring
 - Measurement Rewards System with integrated rewards
 - Enhanced Invitation System with readiness validation
-- Comprehensive RPC interface with 35+ commands
+- Comprehensive RPC interface with 40+ commands
 - Complete integration between all systems
 - Comprehensive documentation and testing
 

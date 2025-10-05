@@ -110,6 +110,18 @@ static RPCHelpMan getpendingmeasurementrewards()
                     case MeasurementType::ONLINE_EXCHANGE_VALIDATION:
                         type_name = "online_validation";
                         break;
+                    case MeasurementType::ONLINE_WATER_PRICE_MEASUREMENT:
+                        type_name = "online_water_price_measurement";
+                        break;
+                    case MeasurementType::OFFLINE_WATER_PRICE_MEASUREMENT:
+                        type_name = "offline_water_price_measurement";
+                        break;
+                    case MeasurementType::ONLINE_EXCHANGE_RATE_MEASUREMENT:
+                        type_name = "online_exchange_rate_measurement";
+                        break;
+                    case MeasurementType::OFFLINE_EXCHANGE_RATE_MEASUREMENT:
+                        type_name = "offline_exchange_rate_measurement";
+                        break;
                 }
                 reward_obj.pushKV("type", type_name);
                 

@@ -36,4 +36,9 @@ UniValue submitexchangeratewithvalidation(const JSONRPCRequest& request);
 UniValue validateautomatedmeasurement(const JSONRPCRequest& request);
 UniValue getgaussianrange(const JSONRPCRequest& request);
 
+// Automatic invitation trigger RPC commands
+UniValue checkandcreateinvitations(const JSONRPCRequest& request);
+UniValue monitormeasurementtargets(const JSONRPCRequest& request);
+UniValue getmeasurementgap(const JSONRPCRequest& request);
+
 #endif // BITCOIN_RPC_O_MEASUREMENT_RPC_H

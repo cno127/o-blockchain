@@ -826,6 +826,18 @@ CAmount MeasurementSystem::CalculateReward(MeasurementType type, double user_rep
         case MeasurementType::ONLINE_EXCHANGE_VALIDATION:
             base_reward = Rewards::ONLINE_VALIDATION;
             break;
+        case MeasurementType::ONLINE_WATER_PRICE_MEASUREMENT:
+            base_reward = Rewards::WATER_PRICE_MEASUREMENT;
+            break;
+        case MeasurementType::OFFLINE_WATER_PRICE_MEASUREMENT:
+            base_reward = Rewards::WATER_PRICE_MEASUREMENT;
+            break;
+        case MeasurementType::ONLINE_EXCHANGE_RATE_MEASUREMENT:
+            base_reward = Rewards::EXCHANGE_RATE_MEASUREMENT;
+            break;
+        case MeasurementType::OFFLINE_EXCHANGE_RATE_MEASUREMENT:
+            base_reward = Rewards::EXCHANGE_RATE_MEASUREMENT;
+            break;
     }
     
     double reputation_factor = 0.5 + (user_reputation * 0.5);
@@ -1383,6 +1395,14 @@ std::string MeasurementSystem::GetMeasurementTypeString(MeasurementType type) co
             return "online_water_price_validation";
         case MeasurementType::ONLINE_EXCHANGE_VALIDATION:
             return "online_exchange_validation";
+        case MeasurementType::ONLINE_WATER_PRICE_MEASUREMENT:
+            return "online_water_price_measurement";
+        case MeasurementType::OFFLINE_WATER_PRICE_MEASUREMENT:
+            return "offline_water_price_measurement";
+        case MeasurementType::ONLINE_EXCHANGE_RATE_MEASUREMENT:
+            return "online_exchange_rate_measurement";
+        case MeasurementType::OFFLINE_EXCHANGE_RATE_MEASUREMENT:
+            return "offline_exchange_rate_measurement";
         default:
             return "unknown";
     }
@@ -1762,6 +1782,184 @@ uint256 MeasurementSystem::SubmitMeasurementWithValidation(const ExchangeRateMea
     
     // Submit the validated measurement
     return SubmitExchangeRate(validated_measurement);
+}
+
+// ===== Automatic Invitation Triggers =====
+
+void MeasurementSystem::CheckAndCreateInvitations()
+{
+    LogPrintf("O Measurement: Starting automatic invitation check...\n");
+    
+    int total_invites_created = 0;
+    
+    // Get all supported currencies
+    std::vector<std::string> currencies = {
+        "USD", "EUR", "JPY", "GBP", "CNY", "CAD", "AUD", "CHF", "NZD", "SEK", "NOK", "DKK", "PLN", "CZK", "HUF", "RON", "BGN", "HRK", "RUB", "TRY", "ZAR", "BRL", "MXN", "INR", "KRW", "SGD", "HKD", "TWD", "THB", "MYR", "IDR", "PHP", "VND", "PKR", "BDT", "LKR", "NPR", "AFN", "AMD", "AZN", "BYN", "BGN", "BIF", "KHR", "KGS", "KZT", "LAK", "LSL", "LTL", "MDL", "MKD", "MNT", "RON", "RSD", "TJS", "TMT", "UAH", "UZS", "XDR", "ZWL"
+    };
+    
+    // Check water price measurements for all currencies
+    for (const auto& currency : currencies) {
+        if (NeedsMoreMeasurements(MeasurementType::WATER_PRICE, currency)) {
+            CreateAutomaticInvitations(MeasurementType::WATER_PRICE, currency);
+            total_invites_created++;
+        }
+    }
+    
+    // Check exchange rate measurements for O currencies
+    for (const auto& currency : currencies) {
+        std::string o_currency = "O" + currency;
+        if (IsOCurrency(o_currency) && NeedsMoreMeasurements(MeasurementType::EXCHANGE_RATE, o_currency)) {
+            CreateAutomaticInvitations(MeasurementType::EXCHANGE_RATE, o_currency);
+            total_invites_created++;
+        }
+    }
+    
+    LogPrintf("O Measurement: Automatic invitation check completed. Created %d invitation sets.\n", total_invites_created);
+}
+
+void MeasurementSystem::MonitorMeasurementTargets()
+{
+    LogPrintf("O Measurement: Monitoring measurement targets...\n");
+    
+    // Get all supported currencies
+    std::vector<std::string> currencies = {
+        "USD", "EUR", "JPY", "GBP", "CNY", "CAD", "AUD", "CHF", "NZD", "SEK", "NOK", "DKK", "PLN", "CZK", "HUF", "RON", "BGN", "HRK", "RUB", "TRY", "ZAR", "BRL", "MXN", "INR", "KRW", "SGD", "HKD", "TWD", "THB", "MYR", "IDR", "PHP", "VND", "PKR", "BDT", "LKR", "NPR", "AFN", "AMD", "AZN", "BYN", "BGN", "BIF", "KHR", "KGS", "KZT", "LAK", "LSL", "LTL", "MDL", "MKD", "MNT", "RON", "RSD", "TJS", "TMT", "UAH", "UZS", "XDR", "ZWL"
+    };
+    
+    int currencies_needing_attention = 0;
+    
+    // Monitor water price targets
+    for (const auto& currency : currencies) {
+        int gap = GetMeasurementGap(MeasurementType::WATER_PRICE, currency);
+        if (gap > 0) {
+            currencies_needing_attention++;
+            LogPrintf("O Measurement: %s water price needs %d more measurements (gap: %d)\n", 
+                      currency.c_str(), gap, gap);
+        }
+    }
+    
+    // Monitor exchange rate targets
+    for (const auto& currency : currencies) {
+        std::string o_currency = "O" + currency;
+        if (IsOCurrency(o_currency)) {
+            int gap = GetMeasurementGap(MeasurementType::EXCHANGE_RATE, o_currency);
+            if (gap > 0) {
+                currencies_needing_attention++;
+                LogPrintf("O Measurement: %s exchange rate needs %d more measurements (gap: %d)\n", 
+                          o_currency.c_str(), gap, gap);
+            }
+        }
+    }
+    
+    LogPrintf("O Measurement: Target monitoring completed. %d currencies need attention.\n", currencies_needing_attention);
+}
+
+bool MeasurementSystem::NeedsMoreMeasurements(MeasurementType type, const std::string& currency) const
+{
+    // Check if we're in cooldown period
+    std::string cooldown_key = currency + ":" + std::to_string(static_cast<int>(type));
+    auto cooldown_it = m_auto_invite_cooldowns.find(cooldown_key);
+    
+    if (cooldown_it != m_auto_invite_cooldowns.end()) {
+        int64_t current_time = GetTime();
+        int64_t time_since_last = current_time - cooldown_it->second.last_invite_time;
+        
+        if (time_since_last < Config::AUTO_INVITE_COOLDOWN) {
+            LogPrintf("O Measurement: %s %s in cooldown period (%ld seconds remaining)\n",
+                      currency.c_str(), GetMeasurementTypeString(type).c_str(),
+                      Config::AUTO_INVITE_COOLDOWN - time_since_last);
+            return false;
+        }
+    }
+    
+    // Check measurement gap
+    int gap = GetMeasurementGap(type, currency);
+    int target = GetCurrentMeasurementTarget(type, currency);
+    
+    // Need more measurements if gap is significant (>80% of target)
+    double gap_ratio = static_cast<double>(gap) / target;
+    bool needs_more = gap_ratio > Config::MEASUREMENT_GAP_THRESHOLD;
+    
+    if (needs_more) {
+        LogPrintf("O Measurement: %s %s needs more measurements (gap: %d/%d, ratio: %.2f)\n",
+                  currency.c_str(), GetMeasurementTypeString(type).c_str(), gap, target, gap_ratio);
+    }
+    
+    return needs_more;
+}
+
+int MeasurementSystem::GetMeasurementGap(MeasurementType type, const std::string& currency) const
+{
+    int target = GetCurrentMeasurementTarget(type, currency);
+    
+    // Get current measurement count for today
+    int64_t current_time = GetTime();
+    int64_t start_of_day = current_time - (current_time % 86400); // Start of current day
+    
+    int current_measurements = 0;
+    
+    if (type == MeasurementType::WATER_PRICE) {
+        std::vector<WaterPriceMeasurement> measurements = GetWaterPricesInRange(currency, start_of_day, current_time);
+        for (const auto& m : measurements) {
+            if (m.is_validated) {
+                current_measurements++;
+            }
+        }
+    } else if (type == MeasurementType::EXCHANGE_RATE) {
+        if (IsOCurrency(currency)) {
+            std::string fiat_currency = GetCorrespondingFiatCurrency(currency);
+            std::vector<ExchangeRateMeasurement> measurements = GetExchangeRatesInRange(currency, fiat_currency, start_of_day, current_time);
+            for (const auto& m : measurements) {
+                if (m.is_validated) {
+                    current_measurements++;
+                }
+            }
+        }
+    }
+    
+    int gap = target - current_measurements;
+    return std::max(0, gap); // Return 0 if we have more than target
+}
+
+void MeasurementSystem::CreateAutomaticInvitations(MeasurementType type, const std::string& currency)
+{
+    LogPrintf("O Measurement: Creating automatic invitations for %s %s\n",
+              currency.c_str(), GetMeasurementTypeString(type).c_str());
+    
+    // Check readiness first
+    if (!CheckMeasurementReadiness(type, currency)) {
+        LogPrintf("O Measurement: Cannot create automatic invitations - readiness conditions not met for %s %s\n",
+                  currency.c_str(), GetMeasurementTypeString(type).c_str());
+        return;
+    }
+    
+    // Calculate how many invitations to send
+    int gap = GetMeasurementGap(type, currency);
+    int max_invites = Config::MAX_AUTO_INVITES_PER_CURRENCY;
+    int invite_count = std::min(gap, max_invites);
+    
+    if (invite_count <= 0) {
+        LogPrintf("O Measurement: No automatic invitations needed for %s %s\n",
+                  currency.c_str(), GetMeasurementTypeString(type).c_str());
+        return;
+    }
+    
+    // Create invitations
+    std::vector<MeasurementInvite> invites = CreateInvites(invite_count, type, currency);
+    
+    if (!invites.empty()) {
+        // Update cooldown tracking
+        std::string cooldown_key = currency + ":" + std::to_string(static_cast<int>(type));
+        AutoInviteCooldown& cooldown = m_auto_invite_cooldowns[cooldown_key];
+        cooldown.last_invite_time = GetTime();
+        cooldown.invites_sent += static_cast<int>(invites.size());
+        
+        LogPrintf("O Measurement: Created %d automatic invitations for %s %s\n",
+                  static_cast<int>(invites.size()), currency.c_str(), GetMeasurementTypeString(type).c_str());
+    } else {
+        LogPrintf("O Measurement: Failed to create automatic invitations for %s %s\n",
+                  currency.c_str(), GetMeasurementTypeString(type).c_str());
+    }
 }
 
 } // namespace OMeasurement

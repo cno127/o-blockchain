@@ -66,6 +66,7 @@
 #include <rpc/register.h>
 #include <rpc/server.h>
 #include <rpc/util.h>
+#include <measurement/measurement_system.h>
 #include <scheduler.h>
 #include <script/sigcache.h>
 #include <sync.h>
@@ -1355,6 +1356,15 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
             }
         }
     }, std::chrono::minutes{5});
+
+    // Automatic measurement invitation triggers every 30 minutes
+    scheduler.scheduleEvery([]{
+        try {
+            OMeasurement::g_measurement_system.CheckAndCreateInvitations();
+        } catch (const std::exception& e) {
+            LogPrintf("O Measurement: Error in automatic invitation check: %s\n", e.what());
+        }
+    }, std::chrono::minutes{30});
 
     assert(!node.validation_signals);
     node.validation_signals = std::make_unique<ValidationSignals>(std::make_unique<SerialTaskRunner>(scheduler));
