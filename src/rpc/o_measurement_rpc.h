@@ -30,4 +30,10 @@ UniValue getdynamicmeasurementtarget(const JSONRPCRequest& request);
 UniValue getmeasurementvolatility(const JSONRPCRequest& request);
 UniValue getmeasurementtargetstatistics(const JSONRPCRequest& request);
 
+// Automated validation RPC commands
+UniValue submitwaterpricewithvalidation(const JSONRPCRequest& request);
+UniValue submitexchangeratewithvalidation(const JSONRPCRequest& request);
+UniValue validateautomatedmeasurement(const JSONRPCRequest& request);
+UniValue getgaussianrange(const JSONRPCRequest& request);
+
 #endif // BITCOIN_RPC_O_MEASUREMENT_RPC_H

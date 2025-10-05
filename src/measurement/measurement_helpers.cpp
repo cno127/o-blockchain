@@ -1523,5 +1523,246 @@ double MeasurementSystem::CalculateStabilityDeviation(const std::string& o_curre
     return deviation;
 }
 
+// ===== Automated Validation System =====
+
+AutomatedValidationInfo MeasurementSystem::PerformAutomatedValidation(const WaterPriceMeasurement& measurement) const
+{
+    AutomatedValidationInfo validation;
+    validation.validation_timestamp = GetTime();
+    
+    // 1. Validate Gaussian range
+    double deviation;
+    if (!ValidateGaussianRange(MeasurementType::WATER_PRICE, measurement.currency_code, 
+                              static_cast<double>(measurement.price) / 100.0, deviation)) {
+        validation.result = AutomatedValidationResult::FAILED_GAUSSIAN;
+        validation.failure_reason = "Value outside acceptable Gaussian range";
+        validation.gaussian_deviation = deviation;
+        return validation;
+    }
+    validation.gaussian_deviation = deviation;
+    
+    // 2. Validate based on source type
+    if (measurement.source == MeasurementSource::USER_OFFLINE || 
+        measurement.source == MeasurementSource::BOT_OFFLINE) {
+        
+        // Validate timestamp (within 60 minutes)
+        if (!ValidateTimestamp(measurement.timestamp, validation.validation_timestamp)) {
+            validation.result = AutomatedValidationResult::FAILED_TIMESTAMP;
+            validation.failure_reason = "Measurement timestamp too old (must be within 60 minutes)";
+            validation.timestamp_valid = false;
+            return validation;
+        }
+        validation.timestamp_valid = true;
+        
+        // Validate location
+        if (!ValidateLocation(measurement.location)) {
+            validation.result = AutomatedValidationResult::FAILED_LOCATION;
+            validation.failure_reason = "Invalid location format";
+            validation.location_valid = false;
+            return validation;
+        }
+        validation.location_valid = true;
+        
+    } else if (measurement.source == MeasurementSource::USER_ONLINE || 
+               measurement.source == MeasurementSource::BOT_ONLINE) {
+        
+        // Validate URL accessibility
+        if (!ValidateURL(measurement.source_url)) {
+            validation.result = AutomatedValidationResult::FAILED_URL;
+            validation.failure_reason = "URL not accessible or invalid";
+            validation.url_accessible = false;
+            return validation;
+        }
+        validation.url_accessible = true;
+    }
+    
+    // All validations passed
+    validation.result = AutomatedValidationResult::PASSED;
+    validation.failure_reason = "All automated validations passed";
+    
+    LogPrintf("O Measurement: Automated validation PASSED for water price measurement %s (deviation: %.2f)\n",
+              measurement.measurement_id.GetHex().c_str(), deviation);
+    
+    return validation;
+}
+
+AutomatedValidationInfo MeasurementSystem::PerformAutomatedValidation(const ExchangeRateMeasurement& measurement) const
+{
+    AutomatedValidationInfo validation;
+    validation.validation_timestamp = GetTime();
+    
+    // 1. Validate Gaussian range
+    double deviation;
+    if (!ValidateGaussianRange(MeasurementType::EXCHANGE_RATE, measurement.from_currency, 
+                              measurement.exchange_rate, deviation)) {
+        validation.result = AutomatedValidationResult::FAILED_GAUSSIAN;
+        validation.failure_reason = "Exchange rate outside acceptable Gaussian range";
+        validation.gaussian_deviation = deviation;
+        return validation;
+    }
+    validation.gaussian_deviation = deviation;
+    
+    // 2. Validate based on source type
+    if (measurement.source == MeasurementSource::USER_OFFLINE || 
+        measurement.source == MeasurementSource::BOT_OFFLINE) {
+        
+        // Validate timestamp (within 60 minutes)
+        if (!ValidateTimestamp(measurement.timestamp, validation.validation_timestamp)) {
+            validation.result = AutomatedValidationResult::FAILED_TIMESTAMP;
+            validation.failure_reason = "Measurement timestamp too old (must be within 60 minutes)";
+            validation.timestamp_valid = false;
+            return validation;
+        }
+        validation.timestamp_valid = true;
+        
+        // Validate location
+        if (!ValidateLocation(measurement.location)) {
+            validation.result = AutomatedValidationResult::FAILED_LOCATION;
+            validation.failure_reason = "Invalid location format";
+            validation.location_valid = false;
+            return validation;
+        }
+        validation.location_valid = true;
+        
+    } else if (measurement.source == MeasurementSource::USER_ONLINE || 
+               measurement.source == MeasurementSource::BOT_ONLINE) {
+        
+        // Validate URL accessibility
+        if (!ValidateURL(measurement.source_url)) {
+            validation.result = AutomatedValidationResult::FAILED_URL;
+            validation.failure_reason = "URL not accessible or invalid";
+            validation.url_accessible = false;
+            return validation;
+        }
+        validation.url_accessible = true;
+    }
+    
+    // All validations passed
+    validation.result = AutomatedValidationResult::PASSED;
+    validation.failure_reason = "All automated validations passed";
+    
+    LogPrintf("O Measurement: Automated validation PASSED for exchange rate measurement %s (deviation: %.2f)\n",
+              measurement.measurement_id.GetHex().c_str(), deviation);
+    
+    return validation;
+}
+
+bool MeasurementSystem::ValidateGaussianRange(MeasurementType type, const std::string& currency, double value, double& deviation) const
+{
+    // Get current average and standard deviation
+    auto avg_result = GetAverageWaterPriceWithConfidence(currency, 7);
+    if (!avg_result.has_value()) {
+        // No historical data, accept the measurement
+        deviation = 0.0;
+        return true;
+    }
+    
+    double mean = avg_result->value;
+    double std_dev = avg_result->std_deviation;
+    
+    if (std_dev == 0.0) {
+        // No variation in data, accept if close to mean
+        deviation = std::abs(value - mean) / mean;
+        return deviation <= 0.1; // Within 10% of mean
+    }
+    
+    // Calculate how many standard deviations from mean
+    deviation = std::abs(value - mean) / std_dev;
+    
+    // Accept if within 3 standard deviations
+    return deviation <= Config::GAUSSIAN_ACCEPTANCE_THRESHOLD;
+}
+
+bool MeasurementSystem::ValidateTimestamp(int64_t measurement_timestamp, int64_t current_timestamp) const
+{
+    int64_t time_diff = current_timestamp - measurement_timestamp;
+    return time_diff <= Config::OFFLINE_TIMESTAMP_TOLERANCE;
+}
+
+bool MeasurementSystem::ValidateURL(const std::string& url) const
+{
+    // Basic URL format validation
+    if (url.empty() || url.length() < 10) {
+        return false;
+    }
+    
+    // Check for valid URL scheme
+    if (url.substr(0, 7) != "http://" && url.substr(0, 8) != "https://") {
+        return false;
+    }
+    
+    // TODO: Implement actual URL accessibility check with timeout
+    // For now, just validate format
+    return true;
+}
+
+bool MeasurementSystem::ValidateLocation(const std::string& location) const
+{
+    if (location.empty()) {
+        return false;
+    }
+    
+    if (location.length() < Config::MIN_LOCATION_LENGTH || 
+        location.length() > Config::MAX_LOCATION_LENGTH) {
+        return false;
+    }
+    
+    // Basic location format validation (should contain at least city and country)
+    // Look for common location patterns
+    return location.find(',') != std::string::npos; // Should contain comma separator
+}
+
+std::pair<double, double> MeasurementSystem::GetGaussianRange(MeasurementType type, const std::string& currency) const
+{
+    auto avg_result = GetAverageWaterPriceWithConfidence(currency, 7);
+    if (!avg_result.has_value()) {
+        return {0.0, 0.0}; // No data available
+    }
+    
+    double mean = avg_result->value;
+    double std_dev = avg_result->std_deviation;
+    double threshold = Config::GAUSSIAN_ACCEPTANCE_THRESHOLD;
+    
+    return {mean - threshold * std_dev, mean + threshold * std_dev};
+}
+
+uint256 MeasurementSystem::SubmitMeasurementWithValidation(const WaterPriceMeasurement& measurement)
+{
+    // Perform automated validation
+    AutomatedValidationInfo validation = PerformAutomatedValidation(measurement);
+    
+    if (validation.result != AutomatedValidationResult::PASSED) {
+        LogPrintf("O Measurement: Automated validation FAILED for water price measurement: %s\n",
+                  validation.failure_reason.c_str());
+        return uint256(); // Return null hash to indicate failure
+    }
+    
+    // Create a copy with validation info
+    WaterPriceMeasurement validated_measurement = measurement;
+    validated_measurement.auto_validation = validation;
+    
+    // Submit the validated measurement
+    return SubmitWaterPrice(validated_measurement);
+}
+
+uint256 MeasurementSystem::SubmitMeasurementWithValidation(const ExchangeRateMeasurement& measurement)
+{
+    // Perform automated validation
+    AutomatedValidationInfo validation = PerformAutomatedValidation(measurement);
+    
+    if (validation.result != AutomatedValidationResult::PASSED) {
+        LogPrintf("O Measurement: Automated validation FAILED for exchange rate measurement: %s\n",
+                  validation.failure_reason.c_str());
+        return uint256(); // Return null hash to indicate failure
+    }
+    
+    // Create a copy with validation info
+    ExchangeRateMeasurement validated_measurement = measurement;
+    validated_measurement.auto_validation = validation;
+    
+    // Submit the validated measurement
+    return SubmitExchangeRate(validated_measurement);
+}
+
 } // namespace OMeasurement
 

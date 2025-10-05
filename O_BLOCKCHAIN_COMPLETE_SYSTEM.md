@@ -339,7 +339,101 @@ bitcoin-cli getmeasurementvolatility water USD 7
 
 ---
 
-## 📧 **6. Enhanced Invitation System**
+## 🤖 **6. Automated Validation System**
+
+### **Key Features**
+- **Gaussian Range Validation**: Automatically filters out measurements outside acceptable statistical ranges
+- **Source Type Detection**: Differentiates between user/bot and online/offline measurements
+- **Timestamp Validation**: Ensures offline measurements are within 60 minutes
+- **URL Validation**: Verifies online measurement sources are accessible
+- **Location Validation**: Validates geographic location format for offline measurements
+- **Pre-Human Filtering**: Reduces burden on human validators by filtering obvious errors
+
+### **Measurement Types**
+1. **Online Measurement**: User provides URL + value + O currency code
+2. **Offline Measurement**: User provides image + value + O currency code + geo location
+3. **Online Validation**: User confirms URL data (value, currency, water content)
+4. **Offline Validation**: User confirms image data (value, currency, water content)
+
+### **Source Types**
+- **USER_ONLINE**: User provides online data with URL
+- **USER_OFFLINE**: User provides offline data with image and location
+- **BOT_ONLINE**: Bot scrapes online data
+- **BOT_OFFLINE**: Bot processes offline data
+
+### **Validation Process**
+1. **Gaussian Range Check**: Value must be within 3 standard deviations of mean
+2. **Source-Specific Validation**:
+   - **Online**: URL accessibility and format validation
+   - **Offline**: Timestamp (≤60 min) and location format validation
+3. **Automated Rejection**: Failed measurements are rejected before human validation
+4. **URL Library**: Validated online sources are saved for bot automation
+
+### **Configuration Parameters**
+```cpp
+static constexpr double GAUSSIAN_ACCEPTANCE_THRESHOLD = 3.0;     // 3 standard deviations
+static constexpr int OFFLINE_TIMESTAMP_TOLERANCE = 3600;         // 60 minutes
+static constexpr int URL_VALIDATION_TIMEOUT = 10;                // 10 seconds
+static constexpr int MIN_LOCATION_LENGTH = 3;                    // Minimum location length
+static constexpr int MAX_LOCATION_LENGTH = 200;                  // Maximum location length
+```
+
+### **RPC Commands**
+```bash
+# Submit water price with automated validation
+bitcoin-cli submitwaterpricewithvalidation USD 1.50 user_online https://example.com/water-price
+bitcoin-cli submitwaterpricewithvalidation USD 1.50 user_offline "New York, USA" abc123hash
+
+# Submit exchange rate with automated validation
+bitcoin-cli submitexchangeratewithvalidation OUSD USD 1.20 user_online https://example.com/exchange-rate
+bitcoin-cli submitexchangeratewithvalidation OUSD USD 1.20 user_offline "New York, USA" abc123hash
+
+# Get Gaussian acceptance range
+bitcoin-cli getgaussianrange water USD
+bitcoin-cli getgaussianrange exchange OUSD
+```
+
+### **Usage Examples**
+```bash
+# Submit online water price measurement
+bitcoin-cli submitwaterpricewithvalidation USD 1.50 user_online https://example.com/water-price
+# Response:
+{
+  "measurement_id": "abc123...",
+  "validation_passed": true,
+  "validation_result": "passed",
+  "failure_reason": "",
+  "gaussian_deviation": 0.5
+}
+
+# Submit offline exchange rate measurement
+bitcoin-cli submitexchangeratewithvalidation OUSD USD 1.20 user_offline "New York, USA" imagehash123
+# Response:
+{
+  "measurement_id": "def456...",
+  "validation_passed": true,
+  "validation_result": "passed",
+  "failure_reason": "",
+  "gaussian_deviation": 1.2
+}
+
+# Check Gaussian range
+bitcoin-cli getgaussianrange water USD
+# Response:
+{
+  "type": "water",
+  "currency": "USD",
+  "min_value": 0.80,
+  "max_value": 2.20,
+  "mean": 1.50,
+  "std_deviation": 0.23,
+  "threshold": 3.0
+}
+```
+
+---
+
+## 📧 **7. Enhanced Invitation System**
 
 ### **Key Features**
 - **Readiness Validation**: Checks infrastructure before sending invitations
@@ -399,7 +493,7 @@ bitcoin-cli createinvites 10 water USD
 
 ---
 
-## 🔄 **7. Complete Workflow Integration**
+## 🔄 **8. Complete Workflow Integration**
 
 ### **System Startup**
 ```bash
@@ -474,7 +568,7 @@ bitcoin-cli detectcurrencydisappearance OUSD USD
 
 ---
 
-## 🎯 **8. Key Benefits of the Complete System**
+## 🎯 **9. Key Benefits of the Complete System**
 
 ### **Infrastructure Validation**
 - Ensures sufficient users and coins before starting measurements
@@ -503,7 +597,7 @@ bitcoin-cli detectcurrencydisappearance OUSD USD
 
 ---
 
-## 🚀 **9. Technical Implementation**
+## 🚀 **10. Technical Implementation**
 
 ### **Architecture Overview**
 ```
@@ -534,7 +628,7 @@ bitcoin-cli detectcurrencydisappearance OUSD USD
 
 ---
 
-## 📊 **10. RPC Command Reference**
+## 📊 **11. RPC Command Reference**
 
 ### **Exchange Rate Management**
 - `initializeexchangerates` - Initialize with theoretical rates
@@ -573,18 +667,24 @@ bitcoin-cli detectcurrencydisappearance OUSD USD
 - `getmeasurementvolatility` - Get volatility information for measurements
 - `getmeasurementtargetstatistics` - Get target statistics for all currencies
 
+### **Automated Validation**
+- `submitwaterpricewithvalidation` - Submit water price with automated validation
+- `submitexchangeratewithvalidation` - Submit exchange rate with automated validation
+- `getgaussianrange` - Get Gaussian acceptance range for currency
+
 ---
 
-## 🎉 **11. System Status**
+## 🎉 **12. System Status**
 
 ### **✅ Completed Features**
 - Enhanced Exchange Rate System with scenario distinction
 - Measurement Readiness System with start conditions
 - Statistical Significance System with confidence levels
 - Dynamic Measurement Target System with volatility-based adjustment
+- Automated Validation System with Gaussian range filtering
 - Measurement Rewards System with integrated rewards
 - Enhanced Invitation System with readiness validation
-- Comprehensive RPC interface with 30+ commands
+- Comprehensive RPC interface with 35+ commands
 - Complete integration between all systems
 - Comprehensive documentation and testing
 

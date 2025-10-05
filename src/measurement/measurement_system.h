@@ -27,7 +27,54 @@ enum class MeasurementType : uint8_t {
     EXCHANGE_RATE_OFFLINE_VALIDATION = 3,
     URL_SUBMISSION = 4,
     ONLINE_WATER_PRICE_VALIDATION = 5,
-    ONLINE_EXCHANGE_VALIDATION = 6
+    ONLINE_EXCHANGE_VALIDATION = 6,
+    // New automated validation types
+    ONLINE_WATER_PRICE_MEASUREMENT = 7,    // User provides URL + value
+    OFFLINE_WATER_PRICE_MEASUREMENT = 8,   // User provides image + value + location
+    ONLINE_EXCHANGE_RATE_MEASUREMENT = 9,  // User provides URL + value
+    OFFLINE_EXCHANGE_RATE_MEASUREMENT = 10 // User provides image + value + location
+};
+
+/** Measurement Source Types */
+enum class MeasurementSource : uint8_t {
+    USER_ONLINE = 0,      // User provides online data
+    USER_OFFLINE = 1,     // User provides offline data
+    BOT_ONLINE = 2,       // Bot scrapes online data
+    BOT_OFFLINE = 3       // Bot processes offline data
+};
+
+/** Automated Validation Result */
+enum class AutomatedValidationResult : uint8_t {
+    PASSED = 0,           // Passed all automated checks
+    FAILED_GAUSSIAN = 1,  // Failed Gaussian range validation
+    FAILED_TIMESTAMP = 2, // Failed timestamp validation (offline)
+    FAILED_URL = 3,       // Failed URL validation (online)
+    FAILED_LOCATION = 4,  // Failed location validation (offline)
+    FAILED_FORMAT = 5     // Failed format validation
+};
+
+/** Automated Validation Information */
+struct AutomatedValidationInfo {
+    AutomatedValidationResult result;
+    std::string failure_reason;
+    double gaussian_deviation;       // How many standard deviations from mean
+    bool timestamp_valid;            // For offline measurements
+    bool url_accessible;             // For online measurements
+    bool location_valid;             // For offline measurements
+    int64_t validation_timestamp;    // When automated validation was performed
+    
+    AutomatedValidationInfo() 
+        : result(AutomatedValidationResult::PASSED), failure_reason(), 
+          gaussian_deviation(0.0), timestamp_valid(true), url_accessible(true),
+          location_valid(true), validation_timestamp(0) {}
+    
+    SERIALIZE_METHODS(AutomatedValidationInfo, obj) {
+        uint8_t result_val = static_cast<uint8_t>(obj.result);
+        READWRITE(result_val, obj.failure_reason, obj.gaussian_deviation,
+                  obj.timestamp_valid, obj.url_accessible, obj.location_valid,
+                  obj.validation_timestamp);
+        if (ser_action.ForRead()) obj.result = static_cast<AutomatedValidationResult>(result_val);
+    }
 };
 
 /** Water Price Measurement Structure */
@@ -45,16 +92,21 @@ struct WaterPriceMeasurement {
     std::vector<CPubKey> validators; // Users who validated this measurement
     double confidence_score;         // Confidence score (0.0 to 1.0)
     uint256 invite_id;               // Invitation that prompted this measurement
+    MeasurementSource source;        // Source type (user/bot, online/offline)
+    AutomatedValidationInfo auto_validation; // Automated validation results
     
     WaterPriceMeasurement() 
         : measurement_id(), submitter(), currency_code(), price(0), location(),
           source_url(), proof_image_hash(), timestamp(0), block_height(0), is_validated(false),
-          confidence_score(0.0), invite_id() {}
+          confidence_score(0.0), invite_id(), source(MeasurementSource::USER_ONLINE) {}
     
     SERIALIZE_METHODS(WaterPriceMeasurement, obj) {
+        uint8_t source_val = static_cast<uint8_t>(obj.source);
         READWRITE(obj.measurement_id, obj.submitter, obj.currency_code, obj.price,
                   obj.location, obj.source_url, obj.proof_image_hash, obj.timestamp, obj.block_height,
-                  obj.is_validated, obj.validators, obj.confidence_score, obj.invite_id);
+                  obj.is_validated, obj.validators, obj.confidence_score, obj.invite_id,
+                  source_val, obj.auto_validation);
+        if (ser_action.ForRead()) obj.source = static_cast<MeasurementSource>(source_val);
     }
     
     uint256 GetHash() const;
@@ -75,16 +127,21 @@ struct ExchangeRateMeasurement {
     bool is_validated;               // Whether validated
     std::vector<CPubKey> validators; // Validators
     uint256 invite_id;               // Invitation ID
+    MeasurementSource source;        // Source type (user/bot, online/offline)
+    AutomatedValidationInfo auto_validation; // Automated validation results
     
     ExchangeRateMeasurement()
         : measurement_id(), submitter(), from_currency(), to_currency(),
           exchange_rate(0.0), location(), source_url(), proof_image_hash(), timestamp(0),
-          block_height(0), is_validated(false), invite_id() {}
+          block_height(0), is_validated(false), invite_id(), source(MeasurementSource::USER_ONLINE) {}
     
     SERIALIZE_METHODS(ExchangeRateMeasurement, obj) {
+        uint8_t source_val = static_cast<uint8_t>(obj.source);
         READWRITE(obj.measurement_id, obj.submitter, obj.from_currency, obj.to_currency,
                   obj.exchange_rate, obj.location, obj.source_url, obj.proof_image_hash, obj.timestamp,
-                  obj.block_height, obj.is_validated, obj.validators, obj.invite_id);
+                  obj.block_height, obj.is_validated, obj.validators, obj.invite_id,
+                  source_val, obj.auto_validation);
+        if (ser_action.ForRead()) obj.source = static_cast<MeasurementSource>(source_val);
     }
     
     uint256 GetHash() const;
@@ -273,6 +330,13 @@ namespace Config {
     static constexpr double HIGH_VOLATILITY_THRESHOLD = 0.15;        // 15% coefficient of variation = high volatility
     static constexpr double LOW_VOLATILITY_THRESHOLD = 0.05;         // 5% coefficient of variation = low volatility
     static constexpr int EARLY_STAGE_DAYS = 30;                      // Days considered "early stage" with scarce data
+    
+    // Automated validation parameters
+    static constexpr double GAUSSIAN_ACCEPTANCE_THRESHOLD = 3.0;     // Accept measurements within 3 standard deviations
+    static constexpr int OFFLINE_TIMESTAMP_TOLERANCE = 3600;         // 60 minutes in seconds
+    static constexpr int URL_VALIDATION_TIMEOUT = 10;                // 10 seconds timeout for URL validation
+    static constexpr int MIN_LOCATION_LENGTH = 3;                    // Minimum location string length
+    static constexpr int MAX_LOCATION_LENGTH = 200;                  // Maximum location string length
 }
 
 /** Measurement System Manager */
@@ -346,6 +410,31 @@ public:
     
     /** Get measurement target statistics */
     std::map<std::string, int> GetMeasurementTargetStatistics() const;
+    
+    // ===== Automated Validation System =====
+    
+    /** Perform automated validation on a measurement */
+    AutomatedValidationInfo PerformAutomatedValidation(const WaterPriceMeasurement& measurement) const;
+    AutomatedValidationInfo PerformAutomatedValidation(const ExchangeRateMeasurement& measurement) const;
+    
+    /** Validate measurement value against Gaussian range */
+    bool ValidateGaussianRange(MeasurementType type, const std::string& currency, double value, double& deviation) const;
+    
+    /** Validate timestamp for offline measurements (within 60 minutes) */
+    bool ValidateTimestamp(int64_t measurement_timestamp, int64_t current_timestamp) const;
+    
+    /** Validate URL accessibility for online measurements */
+    bool ValidateURL(const std::string& url) const;
+    
+    /** Validate location format for offline measurements */
+    bool ValidateLocation(const std::string& location) const;
+    
+    /** Get Gaussian range for a currency */
+    std::pair<double, double> GetGaussianRange(MeasurementType type, const std::string& currency) const;
+    
+    /** Submit measurement with automated validation */
+    uint256 SubmitMeasurementWithValidation(const WaterPriceMeasurement& measurement);
+    uint256 SubmitMeasurementWithValidation(const ExchangeRateMeasurement& measurement);
     
     /** Check if invite is valid */
     bool IsInviteValid(const uint256& invite_id, int64_t current_time) const;

@@ -1150,6 +1150,267 @@ static RPCHelpMan getmeasurementtargetstatistics()
     };
 }
 
+static RPCHelpMan submitwaterpricewithvalidation()
+{
+    return RPCHelpMan{
+        "submitwaterpricewithvalidation",
+        "\nSubmit water price measurement with automated validation.\n",
+        {
+            {"currency", RPCArg::Type::STR, RPCArg::Optional::NO, "Currency code (e.g., 'USD', 'EUR')"},
+            {"price", RPCArg::Type::NUM, RPCArg::Optional::NO, "Water price (e.g., 1.50 for $1.50)"},
+            {"source_type", RPCArg::Type::STR, RPCArg::Optional::NO, "Source type: 'user_online', 'user_offline', 'bot_online', 'bot_offline'"},
+            {"source_url", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "Source URL (required for online measurements)"},
+            {"location", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "Geographic location (required for offline measurements)"},
+            {"image_hash", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "Image hash for offline measurements"},
+            {"timestamp", RPCArg::Type::NUM, RPCArg::Optional::OMITTED, "Measurement timestamp (default: current time)"},
+        },
+        RPCResult{
+            RPCResult::Type::OBJ, "", "",
+            {
+                {RPCResult::Type::STR, "measurement_id", "Measurement ID if successful"},
+                {RPCResult::Type::BOOL, "validation_passed", "Whether automated validation passed"},
+                {RPCResult::Type::STR, "validation_result", "Validation result: passed, failed_gaussian, failed_timestamp, failed_url, failed_location, failed_format"},
+                {RPCResult::Type::STR, "failure_reason", "Failure reason if validation failed"},
+                {RPCResult::Type::NUM, "gaussian_deviation", "How many standard deviations from mean"},
+            }
+        },
+        RPCExamples{
+            HelpExampleCli("submitwaterpricewithvalidation", "USD 1.50 user_online https://example.com/water-price")
+            + HelpExampleCli("submitwaterpricewithvalidation", "USD 1.50 user_offline \"New York, USA\" abc123hash")
+            + HelpExampleRpc("submitwaterpricewithvalidation", "USD 1.50 user_online https://example.com/water-price")
+        },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+        {
+            std::string currency = request.params[0].get_str();
+            double price = request.params[1].get_real();
+            std::string source_type_str = request.params[2].get_str();
+            
+            // Parse source type
+            MeasurementSource source;
+            if (source_type_str == "user_online") {
+                source = MeasurementSource::USER_ONLINE;
+            } else if (source_type_str == "user_offline") {
+                source = MeasurementSource::USER_OFFLINE;
+            } else if (source_type_str == "bot_online") {
+                source = MeasurementSource::BOT_ONLINE;
+            } else if (source_type_str == "bot_offline") {
+                source = MeasurementSource::BOT_OFFLINE;
+            } else {
+                throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid source type. Must be: user_online, user_offline, bot_online, bot_offline");
+            }
+            
+            // Create measurement
+            WaterPriceMeasurement measurement;
+            measurement.measurement_id = GetRandHash();
+            measurement.currency_code = currency;
+            measurement.price = static_cast<int64_t>(price * 100); // Convert to cents
+            measurement.source = source;
+            measurement.timestamp = request.params[6].isNull() ? GetTime() : request.params[6].getInt<int64_t>();
+            measurement.block_height = 0; // Will be set when mined
+            
+            // Set source-specific fields
+            if (source == MeasurementSource::USER_ONLINE || source == MeasurementSource::BOT_ONLINE) {
+                if (request.params[3].isNull()) {
+                    throw JSONRPCError(RPC_INVALID_PARAMETER, "source_url is required for online measurements");
+                }
+                measurement.source_url = request.params[3].get_str();
+            } else {
+                if (request.params[4].isNull()) {
+                    throw JSONRPCError(RPC_INVALID_PARAMETER, "location is required for offline measurements");
+                }
+                measurement.location = request.params[4].get_str();
+                if (!request.params[5].isNull()) {
+                    measurement.proof_image_hash = request.params[5].get_str();
+                }
+            }
+            
+            // Submit with validation
+            uint256 measurement_id = g_measurement_system.SubmitMeasurementWithValidation(measurement);
+            
+            UniValue response(UniValue::VOBJ);
+            if (measurement_id.IsNull()) {
+                response.pushKV("measurement_id", "");
+                response.pushKV("validation_passed", false);
+                response.pushKV("validation_result", "failed");
+                response.pushKV("failure_reason", "Automated validation failed");
+                response.pushKV("gaussian_deviation", 0.0);
+            } else {
+                response.pushKV("measurement_id", measurement_id.GetHex());
+                response.pushKV("validation_passed", true);
+                response.pushKV("validation_result", "passed");
+                response.pushKV("failure_reason", "");
+                response.pushKV("gaussian_deviation", measurement.auto_validation.gaussian_deviation);
+            }
+            
+            return response;
+        }
+    };
+}
+
+static RPCHelpMan submitexchangeratewithvalidation()
+{
+    return RPCHelpMan{
+        "submitexchangeratewithvalidation",
+        "\nSubmit exchange rate measurement with automated validation.\n",
+        {
+            {"from_currency", RPCArg::Type::STR, RPCArg::Optional::NO, "From currency (e.g., 'OUSD')"},
+            {"to_currency", RPCArg::Type::STR, RPCArg::Optional::NO, "To currency (e.g., 'USD')"},
+            {"exchange_rate", RPCArg::Type::NUM, RPCArg::Optional::NO, "Exchange rate (e.g., 1.20)"},
+            {"source_type", RPCArg::Type::STR, RPCArg::Optional::NO, "Source type: 'user_online', 'user_offline', 'bot_online', 'bot_offline'"},
+            {"source_url", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "Source URL (required for online measurements)"},
+            {"location", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "Geographic location (required for offline measurements)"},
+            {"image_hash", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "Image hash for offline measurements"},
+            {"timestamp", RPCArg::Type::NUM, RPCArg::Optional::OMITTED, "Measurement timestamp (default: current time)"},
+        },
+        RPCResult{
+            RPCResult::Type::OBJ, "", "",
+            {
+                {RPCResult::Type::STR, "measurement_id", "Measurement ID if successful"},
+                {RPCResult::Type::BOOL, "validation_passed", "Whether automated validation passed"},
+                {RPCResult::Type::STR, "validation_result", "Validation result"},
+                {RPCResult::Type::STR, "failure_reason", "Failure reason if validation failed"},
+                {RPCResult::Type::NUM, "gaussian_deviation", "How many standard deviations from mean"},
+            }
+        },
+        RPCExamples{
+            HelpExampleCli("submitexchangeratewithvalidation", "OUSD USD 1.20 user_online https://example.com/exchange-rate")
+            + HelpExampleCli("submitexchangeratewithvalidation", "OUSD USD 1.20 user_offline \"New York, USA\" abc123hash")
+            + HelpExampleRpc("submitexchangeratewithvalidation", "OUSD USD 1.20 user_online https://example.com/exchange-rate")
+        },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+        {
+            std::string from_currency = request.params[0].get_str();
+            std::string to_currency = request.params[1].get_str();
+            double exchange_rate = request.params[2].get_real();
+            std::string source_type_str = request.params[3].get_str();
+            
+            // Parse source type
+            MeasurementSource source;
+            if (source_type_str == "user_online") {
+                source = MeasurementSource::USER_ONLINE;
+            } else if (source_type_str == "user_offline") {
+                source = MeasurementSource::USER_OFFLINE;
+            } else if (source_type_str == "bot_online") {
+                source = MeasurementSource::BOT_ONLINE;
+            } else if (source_type_str == "bot_offline") {
+                source = MeasurementSource::BOT_OFFLINE;
+            } else {
+                throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid source type. Must be: user_online, user_offline, bot_online, bot_offline");
+            }
+            
+            // Create measurement
+            ExchangeRateMeasurement measurement;
+            measurement.measurement_id = GetRandHash();
+            measurement.from_currency = from_currency;
+            measurement.to_currency = to_currency;
+            measurement.exchange_rate = exchange_rate;
+            measurement.source = source;
+            measurement.timestamp = request.params[7].isNull() ? GetTime() : request.params[7].getInt<int64_t>();
+            measurement.block_height = 0; // Will be set when mined
+            
+            // Set source-specific fields
+            if (source == MeasurementSource::USER_ONLINE || source == MeasurementSource::BOT_ONLINE) {
+                if (request.params[4].isNull()) {
+                    throw JSONRPCError(RPC_INVALID_PARAMETER, "source_url is required for online measurements");
+                }
+                measurement.source_url = request.params[4].get_str();
+            } else {
+                if (request.params[5].isNull()) {
+                    throw JSONRPCError(RPC_INVALID_PARAMETER, "location is required for offline measurements");
+                }
+                measurement.location = request.params[5].get_str();
+                if (!request.params[6].isNull()) {
+                    measurement.proof_image_hash = request.params[6].get_str();
+                }
+            }
+            
+            // Submit with validation
+            uint256 measurement_id = g_measurement_system.SubmitMeasurementWithValidation(measurement);
+            
+            UniValue response(UniValue::VOBJ);
+            if (measurement_id.IsNull()) {
+                response.pushKV("measurement_id", "");
+                response.pushKV("validation_passed", false);
+                response.pushKV("validation_result", "failed");
+                response.pushKV("failure_reason", "Automated validation failed");
+                response.pushKV("gaussian_deviation", 0.0);
+            } else {
+                response.pushKV("measurement_id", measurement_id.GetHex());
+                response.pushKV("validation_passed", true);
+                response.pushKV("validation_result", "passed");
+                response.pushKV("failure_reason", "");
+                response.pushKV("gaussian_deviation", measurement.auto_validation.gaussian_deviation);
+            }
+            
+            return response;
+        }
+    };
+}
+
+static RPCHelpMan getgaussianrange()
+{
+    return RPCHelpMan{
+        "getgaussianrange",
+        "\nGet Gaussian acceptance range for a currency.\n",
+        {
+            {"type", RPCArg::Type::STR, RPCArg::Optional::NO, "Type: 'water' or 'exchange'"},
+            {"currency", RPCArg::Type::STR, RPCArg::Optional::NO, "Currency code (e.g., 'USD', 'OUSD')"},
+        },
+        RPCResult{
+            RPCResult::Type::OBJ, "", "",
+            {
+                {RPCResult::Type::STR, "type", "Measurement type"},
+                {RPCResult::Type::STR, "currency", "Currency code"},
+                {RPCResult::Type::NUM, "min_value", "Minimum acceptable value"},
+                {RPCResult::Type::NUM, "max_value", "Maximum acceptable value"},
+                {RPCResult::Type::NUM, "mean", "Current mean value"},
+                {RPCResult::Type::NUM, "std_deviation", "Current standard deviation"},
+                {RPCResult::Type::NUM, "threshold", "Gaussian threshold (standard deviations)"},
+            }
+        },
+        RPCExamples{
+            HelpExampleCli("getgaussianrange", "water USD")
+            + HelpExampleCli("getgaussianrange", "exchange OUSD")
+            + HelpExampleRpc("getgaussianrange", "water USD")
+        },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+        {
+            std::string type_str = request.params[0].get_str();
+            std::string currency = request.params[1].get_str();
+            
+            MeasurementType type;
+            if (type_str == "water") {
+                type = MeasurementType::WATER_PRICE;
+            } else if (type_str == "exchange") {
+                type = MeasurementType::EXCHANGE_RATE;
+            } else {
+                throw JSONRPCError(RPC_INVALID_PARAMETER, "Type must be 'water' or 'exchange'");
+            }
+            
+            auto range = g_measurement_system.GetGaussianRange(type, currency);
+            auto avg_result = g_measurement_system.GetAverageWaterPriceWithConfidence(currency, 7);
+            
+            UniValue response(UniValue::VOBJ);
+            response.pushKV("type", type_str);
+            response.pushKV("currency", currency);
+            response.pushKV("min_value", range.first);
+            response.pushKV("max_value", range.second);
+            
+            if (avg_result.has_value()) {
+                response.pushKV("mean", avg_result->value);
+                response.pushKV("std_deviation", avg_result->std_deviation);
+            } else {
+                response.pushKV("mean", 0.0);
+                response.pushKV("std_deviation", 0.0);
+            }
+            
+            response.pushKV("threshold", 3.0); // GAUSSIAN_ACCEPTANCE_THRESHOLD
+            
+            return response;
+        }
+    };
+}
+
 void RegisterOMeasurementRPCCommands(CRPCTable& t)
 {
     static const CRPCCommand commands[] = {
@@ -1171,6 +1432,9 @@ void RegisterOMeasurementRPCCommands(CRPCTable& t)
         {"measurement", &getdynamicmeasurementtarget},
         {"measurement", &getmeasurementvolatility},
         {"measurement", &getmeasurementtargetstatistics},
+        {"measurement", &submitwaterpricewithvalidation},
+        {"measurement", &submitexchangeratewithvalidation},
+        {"measurement", &getgaussianrange},
     };
     
     for (const auto& c : commands) {
