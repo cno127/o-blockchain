@@ -463,11 +463,17 @@ public:
     /** Check if invite is valid */
     bool IsInviteValid(const uint256& invite_id, int64_t current_time) const;
     
+    /** Check if invite is valid for specific user (SECURITY CHECK) */
+    bool IsInviteValidForUser(const uint256& invite_id, const CPubKey& submitter, int64_t current_time) const;
+    
     /** Mark invite as used */
     bool MarkInviteUsed(const uint256& invite_id);
     
     /** Get invite by ID */
     std::optional<MeasurementInvite> GetInvite(const uint256& invite_id) const;
+    
+    /** Get invite details for security auditing */
+    std::optional<std::string> GetInviteDetails(const uint256& invite_id) const;
     
     /** Expire old invites */
     void ExpireOldInvites(int64_t current_time);

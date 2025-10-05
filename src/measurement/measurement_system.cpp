@@ -69,8 +69,8 @@ uint256 MeasurementSystem::SubmitWaterPrice(const WaterPriceMeasurement& measure
         return uint256();
     }
     
-    if (!IsInviteValid(measurement.invite_id, measurement.timestamp)) {
-        LogPrintf("O Measurement: Invalid or expired invite\n");
+    if (!IsInviteValidForUser(measurement.invite_id, measurement.submitter, measurement.timestamp)) {
+        LogPrintf("O Measurement: Invalid invite or security violation - submitter does not match invited user\n");
         return uint256();
     }
     
@@ -154,8 +154,8 @@ uint256 MeasurementSystem::SubmitExchangeRate(const ExchangeRateMeasurement& mea
         return uint256();
     }
     
-    if (!IsInviteValid(measurement.invite_id, measurement.timestamp)) {
-        LogPrintf("O Measurement: Invalid invite for exchange rate submission\n");
+    if (!IsInviteValidForUser(measurement.invite_id, measurement.submitter, measurement.timestamp)) {
+        LogPrintf("O Measurement: Invalid invite or security violation for exchange rate - submitter does not match invited user\n");
         return uint256();
     }
     

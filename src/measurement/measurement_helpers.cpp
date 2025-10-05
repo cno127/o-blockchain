@@ -101,6 +101,35 @@ bool MeasurementSystem::IsInviteValid(const uint256& invite_id, int64_t current_
     return it->second.IsValid(current_time);
 }
 
+bool MeasurementSystem::IsInviteValidForUser(const uint256& invite_id, const CPubKey& submitter, int64_t current_time) const
+{
+    auto it = m_invites.find(invite_id);
+    if (it == m_invites.end()) {
+        LogPrintf("O Measurement: Invite ID not found: %s\n", invite_id.GetHex().c_str());
+        return false;
+    }
+    
+    const MeasurementInvite& invite = it->second;
+    
+    // Check if invite is valid (not expired, not used)
+    if (!invite.IsValid(current_time)) {
+        LogPrintf("O Measurement: Invite is invalid (expired or used): %s\n", invite_id.GetHex().c_str());
+        return false;
+    }
+    
+    // CRITICAL SECURITY CHECK: Verify submitter matches invited user
+    if (invite.invited_user != submitter) {
+        LogPrintf("O Measurement: SECURITY VIOLATION - Submitter %s does not match invited user %s for invite %s\n", 
+                  submitter.GetID().GetHex().c_str(), 
+                  invite.invited_user.GetID().GetHex().c_str(),
+                  invite_id.GetHex().c_str());
+        return false;
+    }
+    
+    LogPrintf("O Measurement: Invite validation successful for user %s\n", submitter.GetID().GetHex().c_str());
+    return true;
+}
+
 bool MeasurementSystem::MarkInviteUsed(const uint256& invite_id)
 {
     auto it = m_invites.find(invite_id);
@@ -119,6 +148,26 @@ std::optional<MeasurementInvite> MeasurementSystem::GetInvite(const uint256& inv
         return std::nullopt;
     }
     return it->second;
+}
+
+std::optional<std::string> MeasurementSystem::GetInviteDetails(const uint256& invite_id) const
+{
+    auto it = m_invites.find(invite_id);
+    if (it == m_invites.end()) {
+        return std::nullopt;
+    }
+    
+    const MeasurementInvite& invite = it->second;
+    std::string details = "Invite ID: " + invite_id.GetHex() + 
+                         ", Invited User: " + invite.invited_user.GetID().GetHex() +
+                         ", Type: " + std::to_string(static_cast<int>(invite.type)) +
+                         ", Currency: " + invite.currency_code +
+                         ", Created: " + std::to_string(invite.created_at) +
+                         ", Expires: " + std::to_string(invite.expires_at) +
+                         ", Used: " + (invite.is_used ? "YES" : "NO") +
+                         ", Expired: " + (invite.is_expired ? "YES" : "NO");
+    
+    return details;
 }
 
 void MeasurementSystem::ExpireOldInvites(int64_t current_time)
@@ -1008,8 +1057,9 @@ std::vector<double> MeasurementSystem::FilterOutliers(
 
 uint256 MeasurementSystem::GenerateInviteId(const CPubKey& user, int64_t timestamp) const
 {
+    // Enhanced security: Include user-specific data and random entropy
     HashWriter ss{};
-    ss << user << timestamp << GetRandHash();
+    ss << user << timestamp << GetRandHash() << GetRandHash(); // Double random entropy
     return ss.GetHash();
 }
 
