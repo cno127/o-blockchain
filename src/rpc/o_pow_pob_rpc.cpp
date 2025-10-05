@@ -19,7 +19,8 @@ using node::NodeContext;
 
 static RPCHelpMan getbusinessratio()
 {
-    return RPCHelpMan{"getbusinessratio",
+    return RPCHelpMan{
+        "getbusinessratio",
         "\nGet the current business miner participation ratio.\n",
         {
             {"height", RPCArg::Type::NUM, RPCArg::Default{-1}, "Block height (default: current tip)"},
@@ -72,7 +73,8 @@ static RPCHelpMan getbusinessratio()
 
 static RPCHelpMan getbusinessminerstats()
 {
-    return RPCHelpMan{"getbusinessminerstats",
+    return RPCHelpMan{
+        "getbusinessminerstats",
         "\nGet statistics for a specific business miner.\n",
         {
             {"pubkey_hash", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "Public key hash of the miner"},
@@ -119,7 +121,8 @@ static RPCHelpMan getbusinessminerstats()
 
 static RPCHelpMan listqualifiedbusinessminers()
 {
-    return RPCHelpMan{"listqualifiedbusinessminers",
+    return RPCHelpMan{
+        "listqualifiedbusinessminers",
         "\nList all qualified business miners.\n",
         {
             {"height", RPCArg::Type::NUM, RPCArg::Default{-1}, "Block height (default: current tip)"},
@@ -178,7 +181,8 @@ static RPCHelpMan listqualifiedbusinessminers()
 
 static RPCHelpMan isbusinessminer()
 {
-    return RPCHelpMan{"isbusinessminer",
+    return RPCHelpMan{
+        "isbusinessminer",
         "\nCheck if a public key qualifies as a business miner.\n",
         {
             {"pubkey_hash", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "Public key hash to check"},
@@ -248,7 +252,8 @@ static RPCHelpMan isbusinessminer()
 
 static RPCHelpMan getpowpobstats()
 {
-    return RPCHelpMan{"getpowpobstats",
+    return RPCHelpMan{
+        "getpowpobstats",
         "\nGet overall PoW/PoB consensus statistics.\n",
         {},
         RPCResult{

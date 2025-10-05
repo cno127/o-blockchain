@@ -9,7 +9,8 @@
 
 static RPCHelpMan listcurrencies()
 {
-    return RPCHelpMan{"listcurrencies",
+    return RPCHelpMan{
+        "listcurrencies",
         "\nList all registered currencies in the O blockchain system.\n",
         {
             {"category", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "Filter by category: 'all', 'fiat', 'crypto', 'water'"},
@@ -85,7 +86,8 @@ static RPCHelpMan listcurrencies()
 
 static RPCHelpMan getcurrency()
 {
-    return RPCHelpMan{"getcurrency",
+    return RPCHelpMan{
+        "getcurrency",
         "\nGet detailed information about a specific currency.\n",
         {
             {"symbol_or_id", RPCArg::Type::STR, RPCArg::Optional::NO, "Currency symbol (e.g., 'USD') or ID (e.g., 1)"},
@@ -145,7 +147,8 @@ static RPCHelpMan getcurrency()
 
 static RPCHelpMan registercurrency()
 {
-    return RPCHelpMan{"registercurrency",
+    return RPCHelpMan{
+        "registercurrency",
         "\nRegister a new currency in the O blockchain system (requires special permissions).\n",
         {
             {"id", RPCArg::Type::NUM, RPCArg::Optional::NO, "Currency ID (must be unique)"},

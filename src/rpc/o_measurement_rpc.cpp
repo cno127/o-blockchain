@@ -20,12 +20,14 @@ using node::NodeContext;
 
 static RPCHelpMan submitwaterprice()
 {
-    return RPCHelpMan{"submitwaterprice",
+    return RPCHelpMan{
+        "submitwaterprice",
         "\nSubmit a water price measurement.\n",
         {
             {"currency", RPCArg::Type::STR, RPCArg::Optional::NO, "Currency code (USD, EUR, JPY, etc.)"},
             {"price", RPCArg::Type::NUM, RPCArg::Optional::NO, "Price in smallest unit (cents for USD, etc.)"},
-            {"location", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "Location of measurement"},
+            {"location", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "Geographic location (for offline measurements)"},
+            {"source_url", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "Source URL (for online measurements)"},
             {"proof_hash", RPCArg::Type::STR_HEX, RPCArg::Optional::OMITTED, "SHA256 hash of proof image"},
             {"invite_id", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "Invitation ID"},
         },
@@ -38,16 +40,17 @@ static RPCHelpMan submitwaterprice()
             }
         },
         RPCExamples{
-            HelpExampleCli("submitwaterprice", "\"USD\" 150 \"New York\" \"abc123...\" \"def456...\"")
-            + HelpExampleRpc("submitwaterprice", "\"USD\", 150, \"New York\", \"abc123...\", \"def456...\"")
+            HelpExampleCli("submitwaterprice", "\"USD\" 150 \"New York\" \"https://example.com\" \"abc123...\" \"def456...\"")
+            + HelpExampleRpc("submitwaterprice", "\"USD\", 150, \"New York\", \"https://example.com\", \"abc123...\", \"def456...\"")
         },
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
         {
             std::string currency = request.params[0].get_str();
             int64_t price = request.params[1].getInt<int64_t>();
             std::string location = request.params[2].isNull() ? "" : request.params[2].get_str();
-            std::string proof_hash = request.params[3].isNull() ? "" : request.params[3].get_str();
-            uint256 invite_id = ParseHashV(request.params[4], "invite_id");
+            std::string source_url = request.params[3].isNull() ? "" : request.params[3].get_str();
+            std::string proof_hash = request.params[4].isNull() ? "" : request.params[4].get_str();
+            uint256 invite_id = ParseHashV(request.params[5], "invite_id");
             
             // Create measurement
             WaterPriceMeasurement measurement;
@@ -55,6 +58,7 @@ static RPCHelpMan submitwaterprice()
             measurement.currency_code = currency;
             measurement.price = price;
             measurement.location = location;
+            measurement.source_url = source_url;
             measurement.proof_image_hash = proof_hash;
             measurement.timestamp = GetTime();
             measurement.invite_id = invite_id;
@@ -83,7 +87,8 @@ static RPCHelpMan submitwaterprice()
 
 static RPCHelpMan validatemeasurement()
 {
-    return RPCHelpMan{"validatemeasurement",
+    return RPCHelpMan{
+        "validatemeasurement",
         "\nValidate a water price or exchange rate measurement.\n",
         {
             {"measurement_id", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "Measurement ID to validate"},
@@ -154,7 +159,8 @@ static RPCHelpMan validatemeasurement()
 
 static RPCHelpMan getaveragewaterprice()
 {
-    return RPCHelpMan{"getaveragewaterprice",
+    return RPCHelpMan{
+        "getaveragewaterprice",
         "\nGet average water price for a currency over a time period.\n",
         {
             {"currency", RPCArg::Type::STR, RPCArg::Optional::NO, "Currency code (USD, EUR, etc.)"},
@@ -205,13 +211,15 @@ static RPCHelpMan getaveragewaterprice()
 
 static RPCHelpMan submitexchangerate()
 {
-    return RPCHelpMan{"submitexchangerate",
+    return RPCHelpMan{
+        "submitexchangerate",
         "\nSubmit an exchange rate measurement.\n",
         {
             {"from_currency", RPCArg::Type::STR, RPCArg::Optional::NO, "Source currency code"},
             {"to_currency", RPCArg::Type::STR, RPCArg::Optional::NO, "Target currency code"},
             {"rate", RPCArg::Type::NUM, RPCArg::Optional::NO, "Exchange rate"},
-            {"source_url", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "Source URL"},
+            {"location", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "Geographic location (for offline measurements)"},
+            {"source_url", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "Source URL (for online measurements)"},
             {"invite_id", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "Invitation ID"},
         },
         RPCResult{
@@ -223,16 +231,17 @@ static RPCHelpMan submitexchangerate()
             }
         },
         RPCExamples{
-            HelpExampleCli("submitexchangerate", "\"USD\" \"EUR\" 0.85 \"https://example.com\" \"abc123...\"")
-            + HelpExampleRpc("submitexchangerate", "\"USD\", \"EUR\", 0.85, \"https://example.com\", \"abc123...\"")
+            HelpExampleCli("submitexchangerate", "\"USD\" \"EUR\" 0.85 \"New York\" \"https://example.com\" \"abc123...\"")
+            + HelpExampleRpc("submitexchangerate", "\"USD\", \"EUR\", 0.85, \"New York\", \"https://example.com\", \"abc123...\"")
         },
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
         {
             std::string from_currency = request.params[0].get_str();
             std::string to_currency = request.params[1].get_str();
             double rate = request.params[2].get_real();
-            std::string source_url = request.params[3].isNull() ? "" : request.params[3].get_str();
-            uint256 invite_id = ParseHashV(request.params[4], "invite_id");
+            std::string location = request.params[3].isNull() ? "" : request.params[3].get_str();
+            std::string source_url = request.params[4].isNull() ? "" : request.params[4].get_str();
+            uint256 invite_id = ParseHashV(request.params[5], "invite_id");
             
             // Create measurement
             ExchangeRateMeasurement measurement;
@@ -240,6 +249,7 @@ static RPCHelpMan submitexchangerate()
             measurement.from_currency = from_currency;
             measurement.to_currency = to_currency;
             measurement.exchange_rate = rate;
+            measurement.location = location;
             measurement.source_url = source_url;
             measurement.timestamp = GetTime();
             measurement.invite_id = invite_id;
@@ -266,7 +276,8 @@ static RPCHelpMan submitexchangerate()
 
 static RPCHelpMan createinvites()
 {
-    return RPCHelpMan{"createinvites",
+    return RPCHelpMan{
+        "createinvites",
         "\nCreate measurement invitations for users.\n",
         {
             {"count", RPCArg::Type::NUM, RPCArg::Optional::NO, "Number of invites to create"},
@@ -334,7 +345,8 @@ static RPCHelpMan createinvites()
 
 static RPCHelpMan getmeasurementstatistics()
 {
-    return RPCHelpMan{"getmeasurementstatistics",
+    return RPCHelpMan{
+        "getmeasurementstatistics",
         "\nGet overall measurement system statistics.\n",
         {},
         RPCResult{
@@ -380,7 +392,8 @@ static RPCHelpMan getmeasurementstatistics()
 
 static RPCHelpMan submiturl()
 {
-    return RPCHelpMan{"submiturl",
+    return RPCHelpMan{
+        "submiturl",
         "\nSubmit a URL for automated bot data collection.\n",
         {
             {"url", RPCArg::Type::STR, RPCArg::Optional::NO, "URL to submit"},
@@ -445,7 +458,8 @@ static RPCHelpMan submiturl()
 
 static RPCHelpMan getdailyaveragewaterprice()
 {
-    return RPCHelpMan{"getdailyaveragewaterprice",
+    return RPCHelpMan{
+        "getdailyaveragewaterprice",
         "\nGet daily average water price for a specific currency and date.\n",
         {
             {"currency", RPCArg::Type::STR, RPCArg::Optional::NO, "Currency code (e.g., 'OUSD')"},
@@ -499,7 +513,8 @@ static RPCHelpMan getdailyaveragewaterprice()
 
 static RPCHelpMan getdailyaverageexchangerate()
 {
-    return RPCHelpMan{"getdailyaverageexchangerate",
+    return RPCHelpMan{
+        "getdailyaverageexchangerate",
         "\nGet daily average exchange rate for an O currency to its corresponding fiat currency.\n",
         {
             {"o_currency", RPCArg::Type::STR, RPCArg::Optional::NO, "O currency code (e.g., 'OUSD')"},
@@ -564,7 +579,8 @@ static RPCHelpMan getdailyaverageexchangerate()
 
 static RPCHelpMan getdailyaverages()
 {
-    return RPCHelpMan{"getdailyaverages",
+    return RPCHelpMan{
+        "getdailyaverages",
         "\nGet daily averages for a currency in a date range.\n",
         {
             {"currency", RPCArg::Type::STR, RPCArg::Optional::NO, "Currency code (e.g., 'OUSD')"},
@@ -630,7 +646,8 @@ static RPCHelpMan getdailyaverages()
 
 static RPCHelpMan calculatedailyaverages()
 {
-    return RPCHelpMan{"calculatedailyaverages",
+    return RPCHelpMan{
+        "calculatedailyaverages",
         "\nCalculate and store daily averages for all currencies at current block height.\n",
         {
             {"height", RPCArg::Type::NUM, RPCArg::Optional::OMITTED, "Block height (defaults to current height)"},

@@ -15,6 +15,7 @@
 #include <consensus/tx_verify.h>
 #include <consensus/validation.h>
 #include <consensus/stabilization_mining.h>
+#include <consensus/measurement_rewards.h>
 #include <deploymentstatus.h>
 #include <logging.h>
 #include <node/context.h>
@@ -184,6 +185,20 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock()
         
         LogPrintf("O Mining: Added %d stabilization transactions to block template at height %d\n",
                   static_cast<int>(stab_txs.size()), nHeight);
+    }
+    
+    // O Blockchain: Add measurement reward transactions
+    auto measurement_reward_txs = OConsensus::g_measurement_rewards_manager.CreateMeasurementRewardTransactions(*pblock, nHeight);
+    
+    for (const auto& reward_tx : measurement_reward_txs) {
+        // Add measurement reward transaction to block template
+        pblock->vtx.push_back(MakeTransactionRef(reward_tx));
+        nBlockTx++;
+    }
+    
+    if (!measurement_reward_txs.empty()) {
+        LogPrintf("O Mining: Added %d measurement reward transactions to block template at height %d\n",
+                  static_cast<int>(measurement_reward_txs.size()), nHeight);
     }
 
     LogPrintf("CreateNewBlock(): block weight: %u txs: %u fees: %ld sigops %d\n", GetBlockWeight(*pblock), nBlockTx, nFees, nBlockSigOpsCost);

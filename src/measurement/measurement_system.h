@@ -36,7 +36,8 @@ struct WaterPriceMeasurement {
     CPubKey submitter;
     std::string currency_code;       // USD, EUR, JPY, etc.
     int64_t price;                   // Price in smallest unit (cents, etc.)
-    std::string location;            // Geographic location
+    std::string location;            // Geographic location (for offline measurements)
+    std::string source_url;          // Source URL (for online measurements)
     std::string proof_image_hash;    // IPFS or SHA256 hash of proof image
     int64_t timestamp;               // Unix timestamp
     int block_height;                // Block height when submitted
@@ -47,12 +48,12 @@ struct WaterPriceMeasurement {
     
     WaterPriceMeasurement() 
         : measurement_id(), submitter(), currency_code(), price(0), location(),
-          proof_image_hash(), timestamp(0), block_height(0), is_validated(false),
+          source_url(), proof_image_hash(), timestamp(0), block_height(0), is_validated(false),
           confidence_score(0.0), invite_id() {}
     
     SERIALIZE_METHODS(WaterPriceMeasurement, obj) {
         READWRITE(obj.measurement_id, obj.submitter, obj.currency_code, obj.price,
-                  obj.location, obj.proof_image_hash, obj.timestamp, obj.block_height,
+                  obj.location, obj.source_url, obj.proof_image_hash, obj.timestamp, obj.block_height,
                   obj.is_validated, obj.validators, obj.confidence_score, obj.invite_id);
     }
     
@@ -66,7 +67,8 @@ struct ExchangeRateMeasurement {
     std::string from_currency;       // Source currency (e.g., USD)
     std::string to_currency;         // Target currency (e.g., EUR)
     double exchange_rate;            // Exchange rate value
-    std::string source_url;          // Source URL for verification
+    std::string location;            // Geographic location (for offline measurements)
+    std::string source_url;          // Source URL (for online measurements)
     std::string proof_image_hash;    // IPFS or SHA256 hash of proof
     int64_t timestamp;               // Unix timestamp
     int block_height;                // Block height when submitted
@@ -76,12 +78,12 @@ struct ExchangeRateMeasurement {
     
     ExchangeRateMeasurement()
         : measurement_id(), submitter(), from_currency(), to_currency(),
-          exchange_rate(0.0), source_url(), proof_image_hash(), timestamp(0),
+          exchange_rate(0.0), location(), source_url(), proof_image_hash(), timestamp(0),
           block_height(0), is_validated(false), invite_id() {}
     
     SERIALIZE_METHODS(ExchangeRateMeasurement, obj) {
         READWRITE(obj.measurement_id, obj.submitter, obj.from_currency, obj.to_currency,
-                  obj.exchange_rate, obj.source_url, obj.proof_image_hash, obj.timestamp,
+                  obj.exchange_rate, obj.location, obj.source_url, obj.proof_image_hash, obj.timestamp,
                   obj.block_height, obj.is_validated, obj.validators, obj.invite_id);
     }
     

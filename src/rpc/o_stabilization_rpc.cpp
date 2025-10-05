@@ -13,7 +13,8 @@ using namespace OConsensus;
 
 static RPCHelpMan getstabilitystatus()
 {
-    return RPCHelpMan{"getstabilitystatus",
+    return RPCHelpMan{
+        "getstabilitystatus",
         "\nGet stability status for a currency.\n",
         {
             {"currency", RPCArg::Type::STR, RPCArg::Optional::NO, "Currency code (USD, EUR, etc.)"},
@@ -72,7 +73,8 @@ static RPCHelpMan getstabilitystatus()
 
 static RPCHelpMan getunstablecurrencies()
 {
-    return RPCHelpMan{"getunstablecurrencies",
+    return RPCHelpMan{
+        "getunstablecurrencies",
         "\nGet list of all unstable currencies.\n",
         {},
         RPCResult{
@@ -117,7 +119,8 @@ static RPCHelpMan getunstablecurrencies()
 
 static RPCHelpMan getstabilizationstats()
 {
-    return RPCHelpMan{"getstabilizationstats",
+    return RPCHelpMan{
+        "getstabilizationstats",
         "\nGet overall stabilization mining statistics.\n",
         {},
         RPCResult{
@@ -154,7 +157,8 @@ static RPCHelpMan getstabilizationstats()
 
 static RPCHelpMan getstabilizationhistory()
 {
-    return RPCHelpMan{"getstabilizationhistory",
+    return RPCHelpMan{
+        "getstabilizationhistory",
         "\nGet stabilization transaction history for a currency.\n",
         {
             {"currency", RPCArg::Type::STR, RPCArg::Optional::NO, "Currency code"},
@@ -211,7 +215,8 @@ static RPCHelpMan getstabilizationhistory()
 
 static RPCHelpMan gettotalcoinscreated()
 {
-    return RPCHelpMan{"gettotalcoinscreated",
+    return RPCHelpMan{
+        "gettotalcoinscreated",
         "\nGet total stabilization coins created for a currency.\n",
         {
             {"currency", RPCArg::Type::STR, RPCArg::Optional::NO, "Currency code"},

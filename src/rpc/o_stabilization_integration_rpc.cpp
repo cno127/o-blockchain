@@ -18,7 +18,8 @@ using node::NodeContext;
 
 static RPCHelpMan getstabilizationintegrationstatus()
 {
-    return RPCHelpMan{"getstabilizationintegrationstatus",
+    return RPCHelpMan{
+        "getstabilizationintegrationstatus",
         "\nGet the current status of stabilization integration.\n",
         {},
         RPCResult{
@@ -53,7 +54,8 @@ static RPCHelpMan getstabilizationintegrationstatus()
 
 static RPCHelpMan getstabilizationconsensusstats()
 {
-    return RPCHelpMan{"getstabilizationconsensusstats",
+    return RPCHelpMan{
+        "getstabilizationconsensusstats",
         "\nGet stabilization consensus validation statistics.\n",
         {},
         RPCResult{
@@ -93,7 +95,8 @@ static RPCHelpMan getstabilizationconsensusstats()
 
 static RPCHelpMan getstabilizationcoinstats()
 {
-    return RPCHelpMan{"getstabilizationcoinstats",
+    return RPCHelpMan{
+        "getstabilizationcoinstats",
         "\nGet stabilization coin database statistics.\n",
         {},
         RPCResult{
@@ -131,7 +134,8 @@ static RPCHelpMan getstabilizationcoinstats()
 
 static RPCHelpMan validatestabilizationblock()
 {
-    return RPCHelpMan{"validatestabilizationblock",
+    return RPCHelpMan{
+        "validatestabilizationblock",
         "\nValidate stabilization transactions in a block.\n",
         {
             {"block_hash", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "Block hash to validate"},
@@ -193,7 +197,8 @@ static RPCHelpMan validatestabilizationblock()
 
 static RPCHelpMan getstabilizationconsensushash()
 {
-    return RPCHelpMan{"getstabilizationconsensushash",
+    return RPCHelpMan{
+        "getstabilizationconsensushash",
         "\nGet the stabilization consensus hash for a block.\n",
         {
             {"block_hash", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "Block hash"},

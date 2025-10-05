@@ -115,7 +115,8 @@ add_library(bitcoin_consensus STATIC EXCLUDE_FROM_ALL
   consensus/currency_disappearance_handling.cpp
   consensus/stabilization_coins.cpp
   consensus/stabilization_consensus.cpp
-         # consensus/brightid_integration.cpp  # Temporarily disabled due to compilation issues
+  consensus/measurement_rewards.cpp
+  # consensus/brightid_integration.cpp  # Temporarily disabled due to compilation issues
   consensus/tx_check.cpp
   consensus/user_consensus.cpp
   hash.cpp
@@ -313,6 +314,7 @@ add_library(bitcoin_node STATIC EXCLUDE_FROM_ALL
   rpc/o_stabilization_rpc.cpp
   rpc/o_currency_exchange_rpc.cpp
   rpc/o_stabilization_integration_rpc.cpp
+  rpc/o_measurement_rewards_rpc.cpp
          # rpc/o_currency_lifecycle_rpc.cpp  # Temporarily disabled due to RPC API changes
          # rpc/o_brightid_rpc.cpp  # Temporarily disabled due to RPC API changes
   rpc/output_script.cpp

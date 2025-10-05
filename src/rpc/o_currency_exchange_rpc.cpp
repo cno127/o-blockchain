@@ -19,7 +19,8 @@
 
 static RPCHelpMan exchangecurrency()
 {
-    return RPCHelpMan{"exchangecurrency",
+    return RPCHelpMan{
+        "exchangecurrency",
         "\nExchange one O fiat currency for another using blockchain-defined rates.\n",
         {
             {"from_currency", RPCArg::Type::STR, RPCArg::Optional::NO, "Source currency code (e.g., 'OUSD')"},
@@ -106,7 +107,8 @@ static RPCHelpMan exchangecurrency()
 
 static RPCHelpMan getexchangerate()
 {
-    return RPCHelpMan{"getexchangerate",
+    return RPCHelpMan{
+        "getexchangerate",
         "\nGet current exchange rate between two O fiat currencies.\n",
         {
             {"from_currency", RPCArg::Type::STR, RPCArg::Optional::NO, "Source currency code"},
@@ -155,7 +157,8 @@ static RPCHelpMan getexchangerate()
 
 static RPCHelpMan estimateexchange()
 {
-    return RPCHelpMan{"estimateexchange",
+    return RPCHelpMan{
+        "estimateexchange",
         "\nEstimate the result of a currency exchange without executing it.\n",
         {
             {"from_currency", RPCArg::Type::STR, RPCArg::Optional::NO, "Source currency code"},
@@ -211,7 +214,8 @@ static RPCHelpMan estimateexchange()
 
 static RPCHelpMan validateexchangerate()
 {
-    return RPCHelpMan{"validateexchangerate",
+    return RPCHelpMan{
+        "validateexchangerate",
         "\nValidate if a proposed exchange rate is within acceptable deviation limits.\n",
         {
             {"from_currency", RPCArg::Type::STR, RPCArg::Optional::NO, "Source currency code"},
@@ -267,7 +271,8 @@ static RPCHelpMan validateexchangerate()
 
 static RPCHelpMan getexchangehistory()
 {
-    return RPCHelpMan{"getexchangehistory",
+    return RPCHelpMan{
+        "getexchangehistory",
         "\nGet exchange history for a user or time range.\n",
         {
             {"user_address", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "User address (optional)"},
@@ -336,7 +341,8 @@ static RPCHelpMan getexchangehistory()
 
 static RPCHelpMan getexchangestatistics()
 {
-    return RPCHelpMan{"getexchangestatistics",
+    return RPCHelpMan{
+        "getexchangestatistics",
         "\nGet currency exchange statistics.\n",
         {},
         RPCResult{
@@ -377,7 +383,8 @@ static RPCHelpMan getexchangestatistics()
 
 static RPCHelpMan getsupportedpairs()
 {
-    return RPCHelpMan{"getsupportedpairs",
+    return RPCHelpMan{
+        "getsupportedpairs",
         "\nGet list of supported currency exchange pairs.\n",
         {},
         RPCResult{
@@ -422,7 +429,8 @@ static RPCHelpMan getsupportedpairs()
 
 static RPCHelpMan getcrossocurrencyrate()
 {
-    return RPCHelpMan{"getcrossocurrencyrate",
+    return RPCHelpMan{
+        "getcrossocurrencyrate",
         "\nCalculate exchange rate between two O currencies via fiat currency bridge.\n",
         {
             {"from_o_currency", RPCArg::Type::STR, RPCArg::Optional::NO, "Source O currency code (e.g., 'OUSD')"},
