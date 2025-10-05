@@ -1247,7 +1247,100 @@ std::vector<CPubKey> MeasurementSystem::GetUsersByCurrencyRegion(const std::stri
         {"OIRR", {"IR", "IRN"}},
         {"OLBP", {"LB", "LBN"}},
         {"OSYP", {"SY", "SYR"}},
-        {"OYER", {"YE", "YEM"}}
+        {"OYER", {"YE", "YEM"}},
+        
+        // Additional African Currencies
+        {"OMAD", {"MA", "MAR"}},  // Morocco
+        {"ODZD", {"DZ", "DZA"}},  // Algeria
+        {"OTND", {"TN", "TUN"}},  // Tunisia
+        {"OLYD", {"LY", "LBY"}},  // Libya
+        {"OGHS", {"GH", "GHA"}},  // Ghana
+        {"OXOF", {"BJ", "BF", "CI", "GW", "ML", "NE", "SN", "TG"}},  // West African CFA (8 countries)
+        {"OXAF", {"CM", "CF", "TD", "CG", "GQ", "GA"}},  // Central African CFA (6 countries)
+        {"OUGX", {"UG", "UGA"}},  // Uganda
+        {"OTZS", {"TZ", "TZA"}},  // Tanzania
+        {"ORWF", {"RW", "RWA"}},  // Rwanda
+        {"OBIF", {"BI", "BDI"}},  // Burundi
+        {"OZMW", {"ZM", "ZMB"}},  // Zambia
+        {"OBWP", {"BW", "BWA"}},  // Botswana
+        {"ONAD", {"NA", "NAM"}},  // Namibia
+        {"OSZL", {"SZ", "SWZ"}},  // Eswatini (Swaziland)
+        {"OLSL", {"LS", "LSO"}},  // Lesotho
+        {"OMUR", {"MU", "MUS"}},  // Mauritius
+        {"OSCR", {"SC", "SYC"}},  // Seychelles
+        {"OMGA", {"MG", "MDG"}},  // Madagascar
+        {"OAOA", {"AO", "AGO"}},  // Angola
+        {"OMZN", {"MZ", "MOZ"}},  // Mozambique
+        {"OZWL", {"ZW", "ZWE"}},  // Zimbabwe
+        {"OSDG", {"SD", "SDN"}},  // Sudan
+        {"OSSP", {"SS", "SSD"}},  // South Sudan
+        {"OSOS", {"SO", "SOM"}},  // Somalia
+        {"ODJF", {"DJ", "DJI"}},  // Djibouti
+        {"OERN", {"ER", "ERI"}},  // Eritrea
+        {"OGNF", {"GN", "GIN"}},  // Guinea
+        {"OLRD", {"LR", "LBR"}},  // Liberia
+        {"OSLL", {"SL", "SLE"}},  // Sierra Leone
+        {"OGMD", {"GM", "GMB"}},  // Gambia
+        {"OCVE", {"CV", "CPV"}},  // Cape Verde
+        {"OSTN", {"ST", "STP"}},  // São Tomé and Príncipe
+        {"OCDF", {"CD", "COD"}},  // DR Congo
+        {"OMWK", {"MW", "MWI"}},  // Malawi
+        {"OKMF", {"KM", "COM"}},  // Comoros
+        
+        // Additional Asian & Pacific Currencies
+        {"OMMK", {"MM", "MMR"}},  // Myanmar
+        {"OKHR", {"KH", "KHM"}},  // Cambodia
+        {"OLAK", {"LA", "LAO"}},  // Laos
+        {"OBND", {"BN", "BRN"}},  // Brunei
+        {"ONPR", {"NP", "NPL"}},  // Nepal
+        {"OBTN", {"BT", "BTN"}},  // Bhutan
+        {"OMVR", {"MV", "MDV"}},  // Maldives
+        {"OMNT", {"MN", "MNG"}},  // Mongolia
+        {"OKGS", {"KG", "KGZ"}},  // Kyrgyzstan
+        {"OTJS", {"TJ", "TJK"}},  // Tajikistan
+        {"OTMT", {"TM", "TKM"}},  // Turkmenistan
+        {"OUZS", {"UZ", "UZB"}},  // Uzbekistan
+        {"OFJD", {"FJ", "FJI"}},  // Fiji
+        {"OPGK", {"PG", "PNG"}},  // Papua New Guinea
+        {"OWST", {"WS", "WSM"}},  // Samoa
+        {"OTOP", {"TO", "TON"}},  // Tonga
+        {"OVUV", {"VU", "VUT"}},  // Vanuatu
+        {"OSBD", {"SB", "SLB"}},  // Solomon Islands
+        {"OXPF", {"PF", "NC", "WF"}},  // French Pacific (French Polynesia, New Caledonia, Wallis & Futuna)
+        
+        // Additional European Currencies
+        {"ORON", {"RO", "ROU"}},  // Romania
+        {"OBGN", {"BG", "BGR"}},  // Bulgaria
+        {"OHRK", {"HR", "HRV"}},  // Croatia
+        {"ORUB", {"RU", "RUS"}},  // Russia
+        {"OUAH", {"UA", "UKR"}},  // Ukraine
+        {"OBYN", {"BY", "BLR"}},  // Belarus
+        {"OKZT", {"KZ", "KAZ"}},  // Kazakhstan
+        {"ORSD", {"RS", "SRB"}},  // Serbia
+        {"OMKD", {"MK", "MKD"}},  // North Macedonia
+        {"OALL", {"AL", "ALB"}},  // Albania
+        {"OBAM", {"BA", "BIH"}},  // Bosnia-Herzegovina
+        {"OMDL", {"MD", "MDA"}},  // Moldova
+        {"OGEL", {"GE", "GEO"}},  // Georgia
+        {"OAMD", {"AM", "ARM"}},  // Armenia
+        {"OAZN", {"AZ", "AZE"}},  // Azerbaijan
+        
+        // Additional Americas Currencies
+        {"OGTQ", {"GT", "GTM"}},  // Guatemala
+        {"OHNL", {"HN", "HND"}},  // Honduras
+        {"ONIO", {"NI", "NIC"}},  // Nicaragua
+        {"OCRC", {"CR", "CRI"}},  // Costa Rica
+        {"OPAB", {"PA", "PAN"}},  // Panama
+        {"ODOP", {"DO", "DOM"}},  // Dominican Republic
+        {"OHTG", {"HT", "HTI"}},  // Haiti
+        {"OJMD", {"JM", "JAM"}},  // Jamaica
+        {"OTTD", {"TT", "TTO"}},  // Trinidad & Tobago
+        {"OBBD", {"BB", "BRB"}},  // Barbados
+        {"OXCD", {"AG", "DM", "GD", "KN", "LC", "VC", "AI", "MS"}},  // East Caribbean (8 territories)
+        {"OBOB", {"BO", "BOL"}},  // Bolivia
+        {"OPYG", {"PY", "PRY"}},  // Paraguay
+        {"OGYD", {"GY", "GUY"}},  // Guyana
+        {"OSRD", {"SR", "SUR"}}   // Suriname
     };
     
     auto it = currency_regions.find(currency_code);
