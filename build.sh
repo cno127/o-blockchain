@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# My Bitcoin Project Build Script
-# This script builds the custom Bitcoin-based project
+# O Project Build Script
+# This script builds the O Blockchain project
 
 set -e
 
-echo "Building My Bitcoin Project..."
+echo "Building O Project..."
 
 # Create build directory
 mkdir -p build

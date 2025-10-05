@@ -126,39 +126,49 @@ public:
          * The characters are rarely used upper ASCII, not valid as UTF-8, and produce
          * a large 32-bit integer with any alignment.
          * 
-         * Custom message start for My Bitcoin Project
+         * Custom message start for O Blockchain - "O-BC" in hex
          */
-        pchMessageStart[0] = 0xfa;
-        pchMessageStart[1] = 0xce;
-        pchMessageStart[2] = 0xb0;
-        pchMessageStart[3] = 0x0f;
+        pchMessageStart[0] = 0x4f; // 'O'
+        pchMessageStart[1] = 0x2d; // '-'
+        pchMessageStart[2] = 0x42; // 'B'
+        pchMessageStart[3] = 0x43; // 'C'
         nDefaultPort = 8334; // Different port to avoid conflicts
         nPruneAfterHeight = 100000;
         m_assumed_blockchain_size = 720;
         m_assumed_chain_state_size = 14;
 
-        // Custom genesis block for My Bitcoin Project
-        const char* custom_genesis_msg = "My Bitcoin Project - A custom blockchain based on Bitcoin Core - 2024";
-        const CScript custom_genesis_script = CScript() << "04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5f"_hex << OP_CHECKSIG;
-        genesis = CreateGenesisBlock(custom_genesis_msg, custom_genesis_script, 1741017141, 123456789, 0x1d00ffff, 1, 50 * COIN);
+        // O Blockchain Genesis Block - The World's First Water-Based Stablecoin
+        const char* o_genesis_msg = "O Blockchain - The World's First Water-Based Stablecoin - Money That Makes Sense - 2025";
+        const CScript o_genesis_script = CScript() << "04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5f"_hex << OP_CHECKSIG;
+        
+        // Genesis block parameters for O Blockchain
+        // Timestamp: January 1, 2025 00:00:00 UTC
+        uint32_t genesis_time = 1735689600; // 2025-01-01 00:00:00 UTC
+        uint32_t genesis_nonce = 123456789; // Placeholder nonce
+        uint32_t genesis_bits = 0x1d00ffff; // Same difficulty as Bitcoin
+        int32_t genesis_version = 1;
+        CAmount genesis_reward = 50 * COIN; // Initial reward (will be constant, no halving)
+        
+        genesis = CreateGenesisBlock(o_genesis_msg, o_genesis_script, genesis_time, genesis_nonce, genesis_bits, genesis_version, genesis_reward);
         consensus.hashGenesisBlock = genesis.GetHash();
-        // Note: You'll need to recalculate these hashes after creating your custom genesis block
-        // assert(consensus.hashGenesisBlock == uint256{"your_genesis_hash_here"});
-        // assert(genesis.hashMerkleRoot == uint256{"your_merkle_root_here"});
+        
+        // Log genesis block information
+        LogPrintf("O Blockchain Genesis Block Hash: %s\n", consensus.hashGenesisBlock.GetHex().c_str());
+        LogPrintf("O Blockchain Genesis Merkle Root: %s\n", genesis.hashMerkleRoot.GetHex().c_str());
 
         // Clear existing seeds and add your own
         vSeeds.clear();
         // Add your custom seed nodes here
-        // vSeeds.emplace_back("seed.yourproject.com.");
+        // vSeeds.emplace_back("seed.o.international.");
 
-        // Custom address prefixes for your project
+        // Custom address prefixes for O Project
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,28); // Different from Bitcoin's 0
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,30); // Different from Bitcoin's 5
         base58Prefixes[SECRET_KEY] =     std::vector<unsigned char>(1,156); // Different from Bitcoin's 128
         base58Prefixes[EXT_PUBLIC_KEY] = {0x04, 0x88, 0xB2, 0x1E};
         base58Prefixes[EXT_SECRET_KEY] = {0x04, 0x88, 0xAD, 0xE4};
 
-        bech32_hrp = "mbp"; // Custom bech32 prefix for My Bitcoin Project
+        bech32_hrp = "o"; // Custom bech32 prefix for O Project
 
         vFixedSeeds.clear(); // Clear fixed seeds for custom network
 

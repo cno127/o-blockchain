@@ -106,8 +106,8 @@ BOOST_AUTO_TEST_CASE(difficulty_adjustment)
     header.nNonce = 0;
     
     // Without business miners, should return standard difficulty
-    const CChainParams& params = Params();
-    unsigned int base_difficulty = header.nBits;
+    // const CChainParams& params = Params();
+    // unsigned int base_difficulty = header.nBits;
     
     // Note: This test is simplified as GetNextWorkRequired needs a valid CBlockIndex
     // In real scenario, we would create a proper blockchain context
@@ -117,7 +117,7 @@ BOOST_AUTO_TEST_CASE(business_miner_self_mining_validation)
 {
     HybridPowPobConsensus consensus;
     
-    uint256 miner_pubkey = uint256S("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    // uint256 miner_pubkey = uint256S("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
     
     // Create a block
     CBlock block;

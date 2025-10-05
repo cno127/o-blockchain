@@ -649,7 +649,7 @@ void MeasurementSystem::RecalculateCurrencyStability(int height) {
         }
         
         double observed_water_price = water_price_avg->value;
-        double expected_water_price = 1.0; // Target: 1 O coin = 1 liter of water
+        // double expected_water_price = 1.0; // Target: 1 O coin = 1 liter of water
         
         // For O currencies, also check exchange rate stability
         std::string o_currency = "O" + currency;
