@@ -224,11 +224,21 @@ bitcoin-cli getaverageexchangeratewithconfidence OUSD USD 7
 - **Type-specific Rewards**: Different rewards for different measurement types
 
 ### **Reward Types**
-- **Water Price Measurement**: 50.00 O
-- **Exchange Rate Measurement**: 30.00 O
-- **URL Submission**: 20.00 O
-- **Offline Validation**: 100.00 O
-- **Online Validation**: 25.00 O
+- **Water Price Measurement**: 50.00 O (initial measurement)
+- **Exchange Rate Measurement**: 50.00 O (initial measurement)
+- **URL Submission**: 20.00 O (one-time contribution)
+- **Online Validation**: 10.00 O (remote verification)
+- **Offline Validation**: 80.00 O (requires physical travel + verification)
+
+### **Reward Rationale**
+- **Initial Measurements (50.00 O)**: Base reward for collecting new data
+- **Online Validation (10.00 O)**: Low effort, can be done remotely from home
+- **Offline Validation (80.00 O)**: High effort, requires:
+  - Physical travel to location
+  - Time investment (travel + verification)
+  - Transportation costs
+  - Higher risk and inconvenience
+  - More valuable verification (physical presence)
 
 ### **RPC Commands**
 ```bash

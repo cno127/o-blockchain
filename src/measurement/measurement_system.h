@@ -235,13 +235,19 @@ struct DailyAverage {
 namespace Rewards {
     // O Blockchain uses 2 decimal places (100 cents per O)
     // This allows precision for water prices like $1.50, $2.25, etc.
-    // Higher rewards to incentivize early adoption and quality data collection
-    static constexpr CAmount WATER_PRICE_MEASUREMENT = 5000;     // 50.00 O (~$50-100)
-    static constexpr CAmount WATER_PRICE_OFFLINE_VALIDATION = 3000;      // 30.00 O (~$30-60, requires travel)
-    static constexpr CAmount EXCHANGE_RATE_MEASUREMENT = 5000;   // 50.00 O (~$50-100)
-    static constexpr CAmount EXCHANGE_RATE_OFFLINE_VALIDATION = 3000;    // 30.00 O (~$30-60, requires travel)
+    // Reward structure based on effort and value provided:
+    // - Initial measurements: Base reward for data collection
+    // - Online validation: Low effort, remote verification
+    // - Offline validation: High effort, requires physical travel and verification
+    
+    static constexpr CAmount WATER_PRICE_MEASUREMENT = 5000;     // 50.00 O (~$50-100, initial measurement)
+    static constexpr CAmount EXCHANGE_RATE_MEASUREMENT = 5000;   // 50.00 O (~$50-100, initial measurement)
     static constexpr CAmount URL_SUBMISSION = 2000;              // 20.00 O (~$20-40, valuable one-time contribution)
-    static constexpr CAmount ONLINE_VALIDATION = 1000;           // 10.00 O (~$10-20)
+    
+    // Validation rewards - significantly higher for offline due to travel requirements
+    static constexpr CAmount ONLINE_VALIDATION = 1000;           // 10.00 O (~$10-20, remote verification)
+    static constexpr CAmount WATER_PRICE_OFFLINE_VALIDATION = 8000;      // 80.00 O (~$80-160, requires travel + verification)
+    static constexpr CAmount EXCHANGE_RATE_OFFLINE_VALIDATION = 8000;    // 80.00 O (~$80-160, requires travel + verification)
 }
 
 /** Configuration parameters */
