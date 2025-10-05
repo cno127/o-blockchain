@@ -16,6 +16,7 @@ void RegisterOMeasurementRPCCommands(CRPCTable& t);
 // Daily average RPC functions
 UniValue getdailyaveragewaterprice(const JSONRPCRequest& request);
 UniValue getdailyaverageexchangerate(const JSONRPCRequest& request);
+UniValue checkmeasurementreadiness(const JSONRPCRequest& request);
 UniValue getdailyaverages(const JSONRPCRequest& request);
 UniValue calculatedailyaverages(const JSONRPCRequest& request);
 

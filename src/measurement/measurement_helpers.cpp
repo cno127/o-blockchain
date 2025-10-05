@@ -6,6 +6,7 @@
 #include <consensus/user_consensus.h>
 #include <consensus/currency_lifecycle.h>
 #include <consensus/currency_disappearance_handling.h>
+#include <consensus/measurement_readiness.h>
 #include <hash.h>
 #include <logging.h>
 #include <random.h>
@@ -25,6 +26,13 @@ std::vector<MeasurementInvite> MeasurementSystem::CreateInvites(
     std::vector<MeasurementInvite> invites;
     int64_t current_time = GetTime();
     int64_t expiration_time = current_time + (Config::INVITE_EXPIRATION_DAYS * 24 * 3600);
+    
+    // Check measurement readiness before creating invitations
+    if (!CheckMeasurementReadiness(type, currency_code)) {
+        LogPrintf("O Measurement: Cannot create invitations - readiness conditions not met for %s measurements in %s\n",
+                  GetMeasurementTypeString(type).c_str(), currency_code.empty() ? "general" : currency_code.c_str());
+        return invites; // Return empty vector if not ready
+    }
     
     // Use currency-specific user selection for better targeting
     std::vector<CPubKey> users;
@@ -65,6 +73,13 @@ std::vector<MeasurementInvite> MeasurementSystem::CreateInvites(
 std::vector<MeasurementInvite> MeasurementSystem::CreateInvitesForTargetMeasurements(
     int target_measurements, MeasurementType type, const std::string& currency_code)
 {
+    // Check measurement readiness before creating invitations
+    if (!CheckMeasurementReadiness(type, currency_code)) {
+        LogPrintf("O Measurement: Cannot create target invitations - readiness conditions not met for %s measurements in %s\n",
+                  GetMeasurementTypeString(type).c_str(), currency_code.empty() ? "general" : currency_code.c_str());
+        return std::vector<MeasurementInvite>(); // Return empty vector if not ready
+    }
+    
     // Calculate how many invitations we need to send to achieve target measurements
     int invite_count = CalculateInviteCountForTarget(target_measurements, currency_code, type);
     
@@ -1021,6 +1036,105 @@ int MeasurementSystem::CalculateInviteCountForTarget(int target_measurements, co
               target_measurements, conversion_rate * 100.0, invite_count);
     
     return invite_count;
+}
+
+bool MeasurementSystem::CheckMeasurementReadiness(MeasurementType type, const std::string& currency_code) const {
+    using namespace OConsensus;
+    
+    // For water price measurements, check if we have enough users
+    if (type == MeasurementType::WATER_PRICE || 
+        type == MeasurementType::WATER_PRICE_OFFLINE_VALIDATION ||
+        type == MeasurementType::ONLINE_WATER_PRICE_VALIDATION) {
+        
+        if (!currency_code.empty()) {
+            // Check specific currency readiness
+            std::string o_currency = GetOCurrencyFromFiat(currency_code);
+            if (!o_currency.empty()) {
+                bool ready = g_measurement_readiness_manager.IsWaterPriceMeasurementReady(o_currency);
+                LogPrintf("O Measurement: Water price readiness for %s (%s): %s\n", 
+                          currency_code.c_str(), o_currency.c_str(), ready ? "READY" : "NOT READY");
+                return ready;
+            }
+        } else {
+            // For general water price measurements, check if any currency is ready
+            auto ready_currencies = g_measurement_readiness_manager.GetReadyForWaterPriceMeasurements();
+            bool ready = !ready_currencies.empty();
+            LogPrintf("O Measurement: General water price readiness: %s (%d currencies ready)\n", 
+                      ready ? "READY" : "NOT READY", static_cast<int>(ready_currencies.size()));
+            return ready;
+        }
+    }
+    
+    // For exchange rate measurements, check if we have enough coins
+    if (type == MeasurementType::EXCHANGE_RATE || 
+        type == MeasurementType::EXCHANGE_RATE_OFFLINE_VALIDATION ||
+        type == MeasurementType::ONLINE_EXCHANGE_VALIDATION) {
+        
+        if (!currency_code.empty()) {
+            // Check specific currency readiness
+            std::string o_currency = GetOCurrencyFromFiat(currency_code);
+            if (!o_currency.empty()) {
+                bool ready = g_measurement_readiness_manager.IsExchangeRateMeasurementReady(o_currency);
+                LogPrintf("O Measurement: Exchange rate readiness for %s (%s): %s\n", 
+                          currency_code.c_str(), o_currency.c_str(), ready ? "READY" : "NOT READY");
+                return ready;
+            }
+        } else {
+            // For general exchange rate measurements, check if any currency is ready
+            auto ready_currencies = g_measurement_readiness_manager.GetReadyForExchangeRateMeasurements();
+            bool ready = !ready_currencies.empty();
+            LogPrintf("O Measurement: General exchange rate readiness: %s (%d currencies ready)\n", 
+                      ready ? "READY" : "NOT READY", static_cast<int>(ready_currencies.size()));
+            return ready;
+        }
+    }
+    
+    // For URL submissions, always allow (no specific readiness requirements)
+    if (type == MeasurementType::URL_SUBMISSION) {
+        LogPrintf("O Measurement: URL submission readiness: READY (no requirements)\n");
+        return true;
+    }
+    
+    // Default: not ready for unknown types
+    LogPrintf("O Measurement: Unknown measurement type, not ready\n");
+    return false;
+}
+
+std::string MeasurementSystem::GetOCurrencyFromFiat(const std::string& fiat_currency) const {
+    // Convert fiat currency to O currency by adding "O" prefix
+    if (fiat_currency.empty()) {
+        return "";
+    }
+    
+    std::string o_currency = "O" + fiat_currency;
+    
+    // Validate that this is a supported O currency
+    if (IsOCurrency(o_currency)) {
+        return o_currency;
+    }
+    
+    return "";
+}
+
+std::string MeasurementSystem::GetMeasurementTypeString(MeasurementType type) const {
+    switch (type) {
+        case MeasurementType::WATER_PRICE:
+            return "water_price";
+        case MeasurementType::WATER_PRICE_OFFLINE_VALIDATION:
+            return "water_price_offline_validation";
+        case MeasurementType::EXCHANGE_RATE:
+            return "exchange_rate";
+        case MeasurementType::EXCHANGE_RATE_OFFLINE_VALIDATION:
+            return "exchange_rate_offline_validation";
+        case MeasurementType::URL_SUBMISSION:
+            return "url_submission";
+        case MeasurementType::ONLINE_WATER_PRICE_VALIDATION:
+            return "online_water_price_validation";
+        case MeasurementType::ONLINE_EXCHANGE_VALIDATION:
+            return "online_exchange_validation";
+        default:
+            return "unknown";
+    }
 }
 
 // ===== O_ONLY Currency Measurement Processing =====

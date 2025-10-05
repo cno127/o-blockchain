@@ -240,6 +240,15 @@ public:
     std::vector<MeasurementInvite> CreateInvitesForTargetMeasurements(
         int target_measurements, MeasurementType type, const std::string& currency_code = "");
     
+    /** Check if measurement type is ready for invitations */
+    bool CheckMeasurementReadiness(MeasurementType type, const std::string& currency_code) const;
+    
+    /** Get O currency code from fiat currency code */
+    std::string GetOCurrencyFromFiat(const std::string& fiat_currency) const;
+    
+    /** Get string representation of measurement type */
+    std::string GetMeasurementTypeString(MeasurementType type) const;
+    
     /** Check if invite is valid */
     bool IsInviteValid(const uint256& invite_id, int64_t current_time) const;
     

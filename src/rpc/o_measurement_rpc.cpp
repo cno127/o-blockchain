@@ -327,15 +327,106 @@ static RPCHelpMan createinvites()
             
             UniValue result(UniValue::VARR);
             
-            for (const auto& invite : invites) {
-                UniValue inv(UniValue::VOBJ);
-                inv.pushKV("invite_id", invite.invite_id.GetHex());
-                inv.pushKV("type", type_str);
-                inv.pushKV("expires_at", invite.expires_at);
-                if (!invite.currency_code.empty()) {
-                    inv.pushKV("currency", invite.currency_code);
+            if (invites.empty()) {
+                // No invites created - likely due to readiness conditions not being met
+                UniValue error_info(UniValue::VOBJ);
+                error_info.pushKV("error", "No invitations created");
+                error_info.pushKV("reason", "Readiness conditions not met");
+                error_info.pushKV("type", type_str);
+                if (!currency.empty()) {
+                    error_info.pushKV("currency", currency);
                 }
-                result.push_back(inv);
+                result.push_back(error_info);
+            } else {
+                for (const auto& invite : invites) {
+                    UniValue inv(UniValue::VOBJ);
+                    inv.pushKV("invite_id", invite.invite_id.GetHex());
+                    inv.pushKV("type", type_str);
+                    inv.pushKV("expires_at", invite.expires_at);
+                    if (!invite.currency_code.empty()) {
+                        inv.pushKV("currency", invite.currency_code);
+                    }
+                    result.push_back(inv);
+                }
+            }
+            
+            return result;
+        },
+    };
+}
+
+static RPCHelpMan checkmeasurementreadiness()
+{
+    return RPCHelpMan{
+        "checkmeasurementreadiness",
+        "\nCheck if measurement invitations can be created for a specific type and currency.\n",
+        {
+            {"type", RPCArg::Type::STR, RPCArg::Optional::NO, "Type: 'water', 'exchange', 'validation'"},
+            {"currency", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "Specific currency (optional)"},
+        },
+        RPCResult{
+            RPCResult::Type::OBJ, "", "",
+            {
+                {RPCResult::Type::STR, "type", "Measurement type"},
+                {RPCResult::Type::STR, "currency", "Currency code (if specified)"},
+                {RPCResult::Type::BOOL, "ready", "Whether ready to create invitations"},
+                {RPCResult::Type::STR, "reason", "Reason for readiness status"},
+                {RPCResult::Type::STR, "readiness_details", "Detailed readiness information"},
+            }
+        },
+        RPCExamples{
+            HelpExampleCli("checkmeasurementreadiness", "water")
+            + HelpExampleCli("checkmeasurementreadiness", "exchange USD")
+            + HelpExampleRpc("checkmeasurementreadiness", "water")
+        },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+        {
+            std::string type_str = request.params[0].get_str();
+            std::string currency = request.params[1].isNull() ? "" : request.params[1].get_str();
+            
+            MeasurementType type;
+            if (type_str == "water") {
+                type = MeasurementType::WATER_PRICE;
+            } else if (type_str == "exchange") {
+                type = MeasurementType::EXCHANGE_RATE;
+            } else if (type_str == "validation") {
+                type = MeasurementType::WATER_PRICE_OFFLINE_VALIDATION;
+            } else {
+                throw JSONRPCError(RPC_INVALID_PARAMETER, "Type must be 'water', 'exchange', or 'validation'");
+            }
+            
+            bool ready = g_measurement_system.CheckMeasurementReadiness(type, currency);
+            
+            UniValue result(UniValue::VOBJ);
+            result.pushKV("type", type_str);
+            if (!currency.empty()) {
+                result.pushKV("currency", currency);
+            }
+            result.pushKV("ready", ready);
+            
+            if (ready) {
+                result.pushKV("reason", "Readiness conditions met - invitations can be created");
+            } else {
+                std::string reason = "Readiness conditions not met - ";
+                if (type == MeasurementType::WATER_PRICE || type == MeasurementType::WATER_PRICE_OFFLINE_VALIDATION) {
+                    reason += "insufficient users (need 100+ users)";
+                } else if (type == MeasurementType::EXCHANGE_RATE) {
+                    reason += "insufficient coins (need 100,000+ O coins)";
+                } else {
+                    reason += "unknown requirements";
+                }
+                result.pushKV("reason", reason);
+            }
+            
+            // Add detailed readiness information
+            if (!currency.empty()) {
+                std::string o_currency = g_measurement_system.GetOCurrencyFromFiat(currency);
+                if (!o_currency.empty()) {
+                    result.pushKV("o_currency", o_currency);
+                    result.pushKV("readiness_details", "Check specific currency readiness with measurement_readiness RPC commands");
+                }
+            } else {
+                result.pushKV("readiness_details", "Check general readiness with measurement_readiness RPC commands");
             }
             
             return result;
@@ -690,6 +781,7 @@ void RegisterOMeasurementRPCCommands(CRPCTable& t)
         {"measurement", &getaveragewaterprice},
         {"measurement", &submitexchangerate},
         {"measurement", &createinvites},
+        {"measurement", &checkmeasurementreadiness},
         {"measurement", &getmeasurementstatistics},
         {"measurement", &submiturl},
         {"measurement", &getdailyaveragewaterprice},
