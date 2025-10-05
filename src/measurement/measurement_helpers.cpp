@@ -1117,6 +1117,9 @@ bool MeasurementSystem::IsUserQualifiedForInvitation(const CPubKey& user) const
     //     return false;
     // }
     
+    // IMPORTANT: Geographic access control is checked separately in SelectUsersForCurrency
+    // This function only checks user-specific qualifications (reputation, activity, etc.)
+    
     // Check if user has been active recently (within last 30 days)
     // int64_t current_time = GetTime();
     // int64_t thirty_days_ago = current_time - (30 * 24 * 3600);
