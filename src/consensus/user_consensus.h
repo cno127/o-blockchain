@@ -171,6 +171,10 @@ public:
     bool ChallengeEndorsement(const ChallengeRecord& challenge, std::string& error_message);
     bool ResolveChallenge(uint256 challenge_id, bool uphold_challenge, std::string& error_message);
     
+    /** Verification Method Selection */
+    VerificationMethod GetRecommendedVerificationMethod(const std::string& country_code) const;
+    std::vector<VerificationMethod> GetAllowedVerificationMethods(const std::string& country_code) const;
+    
     /** Validation Methods */
     bool IsUserUnique(const std::string& government_id_hash) const;
     bool IsUserVerified(const CPubKey& user_key) const;

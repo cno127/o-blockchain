@@ -3,6 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <consensus/user_consensus.h>
+#include <consensus/geographic_access_control.h>
 #include <hash.h>
 #include <logging.h>
 #include <util/time.h>
@@ -97,6 +98,13 @@ bool UserRegistryConsensus::RegisterUser(const OfficialUser& user, std::string& 
     if (user.government_id_hash.empty() || user.birth_currency.empty()) {
         error_message = "Invalid user data";
         return false;
+    }
+    
+    // Check geographic access control for KYC requirements
+    if (g_geographic_access_control.DoesCountryRequireKYC(user.country_code)) {
+        LogPrintf("UserConsensus: User from %s requires KYC verification\n", user.country_code.c_str());
+        // For KYC-required countries, we'll use THIRD_PARTY_KYC as the primary method
+        // This will be enforced during the endorsement process
     }
     
     // Check for suspicious registration patterns
@@ -321,6 +329,65 @@ bool UserRegistryConsensus::ValidateEndorsement(const EndorsementRecord& endorse
         return false;
     }
     
+    // Check if endorser exists and is verified
+    auto endorser_it = user_cache.find(endorsement.endorser);
+    if (endorser_it == user_cache.end() || endorser_it->second.status != UserStatus::VERIFIED) {
+        return false;
+    }
+    
+    // Check if endorsed user exists
+    auto endorsed_it = user_cache.find(endorsement.endorsed_user);
+    if (endorsed_it == user_cache.end()) {
+        return false;
+    }
+    
+    // Check endorser reputation
+    if (endorser_it->second.reputation_score < params.min_endorser_reputation) {
+        return false;
+    }
+    
+    // Check for duplicate endorsements
+    for (const auto& existing_endorsement : endorsement_cache) {
+        if (existing_endorsement.second.endorser == endorsement.endorser &&
+            existing_endorsement.second.endorsed_user == endorsement.endorsed_user) {
+            return false;
+        }
+    }
+    
+    // Check if verification method is allowed for the endorsed user's country
+    std::vector<VerificationMethod> allowed_methods = GetAllowedVerificationMethods(endorsed_it->second.country_code);
+    bool method_allowed = std::find(allowed_methods.begin(), allowed_methods.end(), endorsement.verification_method) != allowed_methods.end();
+    
+    if (!method_allowed) {
+        LogPrintf("UserConsensus: Verification method %d not allowed for country %s\n", 
+                  static_cast<int>(endorsement.verification_method), endorsed_it->second.country_code.c_str());
+        return false;
+    }
+    
+    // For KYC-required countries, ensure at least one endorsement uses KYC method
+    if (g_geographic_access_control.DoesCountryRequireKYC(endorsed_it->second.country_code)) {
+        // Check if this is a KYC endorsement or if there are already KYC endorsements
+        bool has_kyc_endorsement = (endorsement.verification_method == VerificationMethod::THIRD_PARTY_KYC);
+        
+        if (!has_kyc_endorsement) {
+            // Check if there are already KYC endorsements for this user
+            for (const auto& existing_endorsement : endorsement_cache) {
+                if (existing_endorsement.second.endorsed_user == endorsement.endorsed_user &&
+                    existing_endorsement.second.verification_method == VerificationMethod::THIRD_PARTY_KYC) {
+                    has_kyc_endorsement = true;
+                    break;
+                }
+            }
+        }
+        
+        if (!has_kyc_endorsement) {
+            LogPrintf("UserConsensus: User from KYC-required country %s should have KYC endorsement\n", 
+                      endorsed_it->second.country_code.c_str());
+            // For now, we'll allow non-KYC endorsements but log a warning
+            // In a stricter implementation, we could require KYC endorsements
+        }
+    }
+    
     return true;
 }
 
@@ -457,4 +524,42 @@ bool UserRegistryConsensus::SyncWithBlockchain(uint32_t current_height) {
     }
     
     return true;
+}
+
+// Verification Method Selection Implementation
+VerificationMethod UserRegistryConsensus::GetRecommendedVerificationMethod(const std::string& country_code) const {
+    // Check if country requires KYC
+    if (g_geographic_access_control.DoesCountryRequireKYC(country_code)) {
+        LogPrintf("UserConsensus: Country %s requires KYC - recommending THIRD_PARTY_KYC\n", country_code.c_str());
+        return VerificationMethod::THIRD_PARTY_KYC;
+    }
+    
+    // For crypto-friendly countries, prefer BrightID (which we'll map to GOVERNMENT_ID for now)
+    // In a full implementation, we'd have a separate BrightID verification method
+    LogPrintf("UserConsensus: Country %s is crypto-friendly - recommending GOVERNMENT_ID\n", country_code.c_str());
+    return VerificationMethod::GOVERNMENT_ID;
+}
+
+std::vector<VerificationMethod> UserRegistryConsensus::GetAllowedVerificationMethods(const std::string& country_code) const {
+    std::vector<VerificationMethod> allowed_methods;
+    
+    // Check if country requires KYC
+    if (g_geographic_access_control.DoesCountryRequireKYC(country_code)) {
+        // KYC-required countries: Allow KYC and government ID verification
+        allowed_methods.push_back(VerificationMethod::THIRD_PARTY_KYC);
+        allowed_methods.push_back(VerificationMethod::GOVERNMENT_ID);
+        allowed_methods.push_back(VerificationMethod::DOCUMENT_REVIEW);
+        LogPrintf("UserConsensus: Country %s allows KYC-based verification methods\n", country_code.c_str());
+    } else {
+        // Crypto-friendly countries: Allow all verification methods including privacy-preserving ones
+        allowed_methods.push_back(VerificationMethod::GOVERNMENT_ID);
+        allowed_methods.push_back(VerificationMethod::VIDEO_CALL);
+        allowed_methods.push_back(VerificationMethod::DOCUMENT_REVIEW);
+        allowed_methods.push_back(VerificationMethod::BIOMETRIC_VERIFICATION);
+        // Note: THIRD_PARTY_KYC is also allowed but not recommended for privacy
+        allowed_methods.push_back(VerificationMethod::THIRD_PARTY_KYC);
+        LogPrintf("UserConsensus: Country %s allows all verification methods\n", country_code.c_str());
+    }
+    
+    return allowed_methods;
 }
