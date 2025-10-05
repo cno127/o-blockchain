@@ -118,9 +118,11 @@ static RPCHelpMan getexchangeratestatus()
             }
             
             result.pushKV("status", status);
-            result.pushKV("measurement_count", 0); // TODO: Get actual measurement count
+            result.pushKV("measurement_count", g_exchange_rate_init_manager.GetMeasurementCount(o_currency, fiat_currency));
             result.pushKV("minimum_required", minimum_required);
             result.pushKV("has_minimum_measurements", has_minimum);
+            result.pushKV("measurement_trend", g_exchange_rate_init_manager.GetMeasurementTrend(o_currency, fiat_currency));
+            result.pushKV("is_disappearing", g_exchange_rate_init_manager.DetectCurrencyDisappearance(o_currency, fiat_currency));
             
             return result;
         },
@@ -193,6 +195,96 @@ static RPCHelpMan getminimummeasurementsthreshold()
     };
 }
 
+static RPCHelpMan detectcurrencydisappearance()
+{
+    return RPCHelpMan{
+        "detectcurrencydisappearance",
+        "\nDetect if a currency is disappearing based on progressive decrease in measurements.\n",
+        {
+            {"o_currency", RPCArg::Type::STR, RPCArg::Optional::NO, "O currency code (e.g., 'OUSD')"},
+            {"fiat_currency", RPCArg::Type::STR, RPCArg::Optional::NO, "Fiat currency code (e.g., 'USD')"},
+        },
+        RPCResult{
+            RPCResult::Type::OBJ, "", "",
+            {
+                {RPCResult::Type::STR, "o_currency", "O currency code"},
+                {RPCResult::Type::STR, "fiat_currency", "Fiat currency code"},
+                {RPCResult::Type::BOOL, "is_disappearing", "Whether currency is detected as disappearing"},
+                {RPCResult::Type::STR, "reason", "Reason for disappearance detection"},
+                {RPCResult::Type::NUM, "days_since_last_measurement", "Days since last measurement"},
+                {RPCResult::Type::NUM, "total_measurements", "Total number of measurements"},
+            }
+        },
+        RPCExamples{
+            HelpExampleCli("detectcurrencydisappearance", "OUSD USD")
+            + HelpExampleRpc("detectcurrencydisappearance", "OUSD USD")
+        },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+        {
+            std::string o_currency = request.params[0].get_str();
+            std::string fiat_currency = request.params[1].get_str();
+            
+            bool is_disappearing = g_exchange_rate_init_manager.DetectCurrencyDisappearance(o_currency, fiat_currency);
+            std::string trend = g_exchange_rate_init_manager.GetMeasurementTrend(o_currency, fiat_currency);
+            int measurement_count = g_exchange_rate_init_manager.GetMeasurementCount(o_currency, fiat_currency);
+            
+            UniValue result(UniValue::VOBJ);
+            result.pushKV("o_currency", o_currency);
+            result.pushKV("fiat_currency", fiat_currency);
+            result.pushKV("is_disappearing", is_disappearing);
+            result.pushKV("reason", is_disappearing ? "Progressive decrease in measurements detected" : "Currency is active");
+            result.pushKV("measurement_trend", trend);
+            result.pushKV("total_measurements", measurement_count);
+            
+            return result;
+        },
+    };
+}
+
+static RPCHelpMan getmeasurementtrend()
+{
+    return RPCHelpMan{
+        "getmeasurementtrend",
+        "\nGet measurement trend for a currency pair.\n",
+        {
+            {"o_currency", RPCArg::Type::STR, RPCArg::Optional::NO, "O currency code (e.g., 'OUSD')"},
+            {"fiat_currency", RPCArg::Type::STR, RPCArg::Optional::NO, "Fiat currency code (e.g., 'USD')"},
+        },
+        RPCResult{
+            RPCResult::Type::OBJ, "", "",
+            {
+                {RPCResult::Type::STR, "o_currency", "O currency code"},
+                {RPCResult::Type::STR, "fiat_currency", "Fiat currency code"},
+                {RPCResult::Type::STR, "trend", "Measurement trend (active, stable, decreasing, disappearing, no_measurements, insufficient_data)"},
+                {RPCResult::Type::NUM, "total_measurements", "Total number of measurements"},
+                {RPCResult::Type::BOOL, "is_disappearing", "Whether currency is detected as disappearing"},
+            }
+        },
+        RPCExamples{
+            HelpExampleCli("getmeasurementtrend", "OUSD USD")
+            + HelpExampleRpc("getmeasurementtrend", "OUSD USD")
+        },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+        {
+            std::string o_currency = request.params[0].get_str();
+            std::string fiat_currency = request.params[1].get_str();
+            
+            std::string trend = g_exchange_rate_init_manager.GetMeasurementTrend(o_currency, fiat_currency);
+            bool is_disappearing = g_exchange_rate_init_manager.DetectCurrencyDisappearance(o_currency, fiat_currency);
+            int measurement_count = g_exchange_rate_init_manager.GetMeasurementCount(o_currency, fiat_currency);
+            
+            UniValue result(UniValue::VOBJ);
+            result.pushKV("o_currency", o_currency);
+            result.pushKV("fiat_currency", fiat_currency);
+            result.pushKV("trend", trend);
+            result.pushKV("total_measurements", measurement_count);
+            result.pushKV("is_disappearing", is_disappearing);
+            
+            return result;
+        },
+    };
+}
+
 void RegisterOExchangeRateInitRPCCommands(CRPCTable& t)
 {
     static const CRPCCommand commands[] = {
@@ -200,6 +292,8 @@ void RegisterOExchangeRateInitRPCCommands(CRPCTable& t)
         {"exchange_rate_init", &getexchangeratestatus},
         {"exchange_rate_init", &getexchangeratestatistics},
         {"exchange_rate_init", &getminimummeasurementsthreshold},
+        {"exchange_rate_init", &detectcurrencydisappearance},
+        {"exchange_rate_init", &getmeasurementtrend},
     };
     
     for (const auto& c : commands) {

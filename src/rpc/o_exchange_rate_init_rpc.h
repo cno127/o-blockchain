@@ -20,5 +20,7 @@ UniValue initializeexchangerates(const JSONRPCRequest& request);
 UniValue getexchangeratestatus(const JSONRPCRequest& request);
 UniValue getexchangeratestatistics(const JSONRPCRequest& request);
 UniValue getminimummeasurementsthreshold(const JSONRPCRequest& request);
+UniValue detectcurrencydisappearance(const JSONRPCRequest& request);
+UniValue getmeasurementtrend(const JSONRPCRequest& request);
 
 #endif // BITCOIN_RPC_O_EXCHANGE_RATE_INIT_RPC_H

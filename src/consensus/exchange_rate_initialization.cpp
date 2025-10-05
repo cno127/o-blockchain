@@ -48,20 +48,22 @@ void ExchangeRateInitializationManager::InitializeExchangeRateForCurrency(const 
     double theoretical_rate = GetTheoreticalExchangeRate(o_currency);
     
     if (theoretical_rate > 0) {
-        // Initialize with theoretical rate
+        // Initialize with theoretical rate (initialization fallback)
         m_exchange_rates[o_currency][fiat_currency] = theoretical_rate;
-        m_exchange_rate_status[o_currency][fiat_currency] = "theoretical";
+        m_exchange_rate_status[o_currency][fiat_currency] = "theoretical_initialization";
         m_measurement_counts[o_currency][fiat_currency] = 0;
+        m_last_measurement_times[o_currency][fiat_currency] = 0; // No measurements yet
         
-        LogPrintf("O Exchange Rate Init: %s/%s = %.4f (theoretical, based on water price)\n",
+        LogPrintf("O Exchange Rate Init: %s/%s = %.4f (theoretical initialization, based on water price)\n",
                   o_currency.c_str(), fiat_currency.c_str(), theoretical_rate);
     } else {
-        // Fallback to 1:1 if no water price data available
+        // Fallback to 1:1 if no water price data available (initialization fallback)
         m_exchange_rates[o_currency][fiat_currency] = 1.0;
-        m_exchange_rate_status[o_currency][fiat_currency] = "theoretical_fallback";
+        m_exchange_rate_status[o_currency][fiat_currency] = "theoretical_initialization_fallback";
         m_measurement_counts[o_currency][fiat_currency] = 0;
+        m_last_measurement_times[o_currency][fiat_currency] = 0; // No measurements yet
         
-        LogPrintf("O Exchange Rate Init: %s/%s = 1.0000 (theoretical fallback, no water price data)\n",
+        LogPrintf("O Exchange Rate Init: %s/%s = 1.0000 (theoretical initialization fallback, no water price data)\n",
                   o_currency.c_str(), fiat_currency.c_str());
     }
 }
@@ -143,6 +145,11 @@ void ExchangeRateInitializationManager::UpdateExchangeRate(const std::string& o_
     // Increment measurement count
     m_measurement_counts[o_currency][fiat_currency]++;
     
+    // Record measurement timestamp
+    int64_t current_time = GetTime();
+    m_measurement_history[o_currency][fiat_currency].push_back(current_time);
+    m_last_measurement_times[o_currency][fiat_currency] = current_time;
+    
     int measurement_count = m_measurement_counts[o_currency][fiat_currency];
     
     if (measurement_count >= MIN_MEASUREMENTS_FOR_RATE) {
@@ -193,6 +200,93 @@ int ExchangeRateInitializationManager::GetMeasurementCount(const std::string& o_
     }
     
     return fiat_it->second;
+}
+
+bool ExchangeRateInitializationManager::DetectCurrencyDisappearance(const std::string& o_currency, const std::string& fiat_currency) const {
+    // Check if we have measurement history
+    auto o_it = m_measurement_history.find(o_currency);
+    if (o_it == m_measurement_history.end()) {
+        return false; // No measurements yet, not disappearing
+    }
+    
+    auto fiat_it = o_it->second.find(fiat_currency);
+    if (fiat_it == o_it->second.end()) {
+        return false; // No measurements yet, not disappearing
+    }
+    
+    const auto& timestamps = fiat_it->second;
+    if (timestamps.size() < 5) {
+        return false; // Need at least 5 measurements to detect trend
+    }
+    
+    // Check if last measurement was more than 30 days ago
+    int64_t current_time = GetTime();
+    int64_t last_measurement = m_last_measurement_times.at(o_currency).at(fiat_currency);
+    int64_t days_since_last = (current_time - last_measurement) / (24 * 60 * 60);
+    
+    if (days_since_last > 30) {
+        LogPrintf("O Exchange Rate Init: %s/%s detected as disappearing (no measurements for %d days)\n",
+                  o_currency.c_str(), fiat_currency.c_str(), static_cast<int>(days_since_last));
+        return true;
+    }
+    
+    // Check for progressive decrease in measurement frequency
+    // Look at last 10 measurements and check if frequency is decreasing
+    if (timestamps.size() >= 10) {
+        std::vector<int64_t> recent_timestamps(timestamps.end() - 10, timestamps.end());
+        
+        // Calculate average interval between measurements
+        int64_t total_interval = 0;
+        for (size_t i = 1; i < recent_timestamps.size(); i++) {
+            total_interval += (recent_timestamps[i] - recent_timestamps[i-1]);
+        }
+        int64_t avg_interval = total_interval / (recent_timestamps.size() - 1);
+        
+        // If average interval is more than 7 days, consider it disappearing
+        if (avg_interval > (7 * 24 * 60 * 60)) {
+            LogPrintf("O Exchange Rate Init: %s/%s detected as disappearing (avg interval: %d days)\n",
+                      o_currency.c_str(), fiat_currency.c_str(), static_cast<int>(avg_interval / (24 * 60 * 60)));
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+std::string ExchangeRateInitializationManager::GetMeasurementTrend(const std::string& o_currency, const std::string& fiat_currency) const {
+    // Check if we have measurement history
+    auto o_it = m_measurement_history.find(o_currency);
+    if (o_it == m_measurement_history.end()) {
+        return "no_measurements";
+    }
+    
+    auto fiat_it = o_it->second.find(fiat_currency);
+    if (fiat_it == o_it->second.end()) {
+        return "no_measurements";
+    }
+    
+    const auto& timestamps = fiat_it->second;
+    if (timestamps.size() < 3) {
+        return "insufficient_data";
+    }
+    
+    // Check if currency is disappearing
+    if (DetectCurrencyDisappearance(o_currency, fiat_currency)) {
+        return "disappearing";
+    }
+    
+    // Check recent measurement frequency
+    int64_t current_time = GetTime();
+    int64_t last_measurement = m_last_measurement_times.at(o_currency).at(fiat_currency);
+    int64_t days_since_last = (current_time - last_measurement) / (24 * 60 * 60);
+    
+    if (days_since_last > 7) {
+        return "decreasing";
+    } else if (days_since_last <= 1) {
+        return "active";
+    } else {
+        return "stable";
+    }
 }
 
 } // namespace OConsensus

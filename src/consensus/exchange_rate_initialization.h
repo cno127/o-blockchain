@@ -30,7 +30,7 @@ public:
     /** Get the minimum number of measurements required before switching to measured rates */
     int GetMinimumMeasurementsThreshold() const { return MIN_MEASUREMENTS_FOR_RATE; }
     
-    /** Get exchange rate status (theoretical, measured, or insufficient_data) */
+    /** Get exchange rate status (theoretical, measured, insufficient_data, or disappearing) */
     std::string GetExchangeRateStatus(const std::string& o_currency, const std::string& fiat_currency) const;
     
     /** Get all initialized exchange rates */
@@ -44,6 +44,15 @@ public:
     
     /** Check if exchange rate is initialized */
     bool IsExchangeRateInitialized(const std::string& o_currency, const std::string& fiat_currency) const;
+    
+    /** Detect currency disappearance based on progressive decrease in measurements */
+    bool DetectCurrencyDisappearance(const std::string& o_currency, const std::string& fiat_currency) const;
+    
+    /** Get measurement trend for a currency pair */
+    std::string GetMeasurementTrend(const std::string& o_currency, const std::string& fiat_currency) const;
+    
+    /** Get measurement count for a currency pair */
+    int GetMeasurementCount(const std::string& o_currency, const std::string& fiat_currency) const;
 
 private:
     // Minimum number of measurements required before switching from theoretical to measured rates
@@ -58,6 +67,12 @@ private:
     // Measurement counts: o_currency -> fiat_currency -> count
     std::map<std::string, std::map<std::string, int>> m_measurement_counts;
     
+    // Measurement history: o_currency -> fiat_currency -> [timestamps]
+    std::map<std::string, std::map<std::string, std::vector<int64_t>>> m_measurement_history;
+    
+    // Currency disappearance detection: o_currency -> fiat_currency -> last_measurement_time
+    std::map<std::string, std::map<std::string, int64_t>> m_last_measurement_times;
+    
     /** Initialize exchange rate for a specific O currency */
     void InitializeExchangeRateForCurrency(const std::string& o_currency);
     
@@ -66,9 +81,6 @@ private:
     
     /** Get measured exchange rate from measurement system */
     std::optional<double> GetMeasuredExchangeRate(const std::string& o_currency, const std::string& fiat_currency) const;
-    
-    /** Get measurement count for a currency pair */
-    int GetMeasurementCount(const std::string& o_currency, const std::string& fiat_currency) const;
 };
 
 /** Global exchange rate initialization manager */
