@@ -113,15 +113,20 @@ CAmount StabilizationMining::CalculateVolumeDifference(const std::string& curren
     // Get exchange rate deviation (how far O currency is from water price)
     double exchange_rate_deviation = CalculateExchangeRateDeviation(currency);
     
+    // Calculate dynamic stabilization factor based on volatility/deviation
+    // Formula: Scales from 0.1 (minimal instability) to 1.0 (severe instability)
+    // This ensures more aggressive stabilization for highly volatile currencies
+    double stabilization_factor = CalculateDynamicStabilizationFactor(info->stability_ratio, currency);
+    
     // Calculate stabilization coins needed
-    // Formula: Volume × Deviation × Stabilization Factor
-    double stabilization_factor = 0.1;  // 10% of volume × deviation
+    // Formula: Volume × Deviation × Dynamic Stabilization Factor
     CAmount stabilization_coins = static_cast<CAmount>(
         static_cast<double>(transaction_volume) * exchange_rate_deviation * stabilization_factor
     );
     
-    LogPrintf("O Stabilization: Currency %s, Volume %d, Deviation %.3f, Coins %d\n",
-              currency.c_str(), transaction_volume, exchange_rate_deviation, stabilization_coins);
+    LogPrintf("O Stabilization: Currency %s, Volume %d, Deviation %.3f, Factor %.3f, Coins %d\n",
+              currency.c_str(), transaction_volume, exchange_rate_deviation, 
+              stabilization_factor, stabilization_coins);
     
     return stabilization_coins;
 }
@@ -330,6 +335,64 @@ void StabilizationMining::PruneOldData(int cutoff_height) {
 
 double StabilizationMining::CalculateStabilityRatio(double expected, double observed) const {
     return (expected == 0) ? 0.0 : std::abs(expected - observed) / expected;
+}
+
+double StabilizationMining::CalculateDynamicStabilizationFactor(double stability_ratio, 
+                                                                const std::string& currency) const {
+    // Dynamic stabilization factor based on volatility level
+    // Scales from 0.1 (minimal instability) to 1.0 (severe instability)
+    
+    // Calculate base factor using stability_ratio (deviation from target)
+    // stability_ratio is typically 0.0 to 1.0+ (0% to 100%+ deviation)
+    
+    double factor;
+    
+    if (stability_ratio <= StabilizationConfig::STABILITY_THRESHOLD) {
+        // Below threshold: should not happen (currency should be stable)
+        // Use minimum factor as safety
+        factor = 0.1;
+    } else if (stability_ratio <= 0.15) {
+        // Minor instability (10-15% deviation): factor 0.1-0.2
+        // Small, short-term volatility
+        factor = 0.1 + (stability_ratio - 0.10) * 2.0; // Interpolate 0.1 to 0.2
+    } else if (stability_ratio <= 0.25) {
+        // Moderate instability (15-25% deviation): factor 0.2-0.4
+        // Medium volatility requiring more intervention
+        factor = 0.2 + (stability_ratio - 0.15) * 2.0; // Interpolate 0.2 to 0.4
+    } else if (stability_ratio <= 0.40) {
+        // High instability (25-40% deviation): factor 0.4-0.7
+        // Significant volatility requiring strong intervention
+        factor = 0.4 + (stability_ratio - 0.25) * 2.0; // Interpolate 0.4 to 0.7
+    } else if (stability_ratio <= 0.60) {
+        // Severe instability (40-60% deviation): factor 0.7-0.9
+        // Very high volatility requiring aggressive intervention
+        factor = 0.7 + (stability_ratio - 0.40) * 1.0; // Interpolate 0.7 to 0.9
+    } else {
+        // Extreme instability (>60% deviation): factor 1.0
+        // Maximum intervention needed
+        factor = 1.0;
+    }
+    
+    // Consider duration of instability (optional enhancement)
+    // If currency has been unstable for a long time, increase factor slightly
+    auto info = GetStabilityStatus(currency);
+    if (info.has_value() && info->unstable_since_height > 0) {
+        int64_t blocks_unstable = info->last_check_height - info->unstable_since_height;
+        int64_t days_unstable = blocks_unstable / (24 * 60 * 60 / 12); // Assuming 12s blocks
+        
+        // Add up to 0.1 factor for prolonged instability (>7 days)
+        if (days_unstable > 7) {
+            double duration_bonus = std::min(0.1, (days_unstable - 7) * 0.01);
+            factor = std::min(1.0, factor + duration_bonus);
+            LogPrintf("O Stabilization: Currency %s unstable for %d days, adding duration bonus %.3f\n",
+                     currency.c_str(), days_unstable, duration_bonus);
+        }
+    }
+    
+    LogPrintf("O Stabilization: Dynamic factor for %s: ratio %.3f → factor %.3f\n",
+             currency.c_str(), stability_ratio, factor);
+    
+    return factor;
 }
 
 bool StabilizationMining::MeetsInstabilityThreshold(const CurrencyStabilityInfo& info, int height) const {

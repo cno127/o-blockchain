@@ -213,6 +213,9 @@ private:
     bool MeetsInstabilityThreshold(const CurrencyStabilityInfo& info, int height) const;
     std::vector<CPubKey> RandomSample(const std::vector<CPubKey>& users, int count) const;
     
+    /** Calculate dynamic stabilization factor based on volatility level */
+    double CalculateDynamicStabilizationFactor(double stability_ratio, const std::string& currency) const;
+    
     /** Integration with measurement system */
     double GetAverageWaterPrice(const std::string& currency, int days) const;
     double GetAverageExchangeRate(const std::string& from, const std::string& to, int days) const;
