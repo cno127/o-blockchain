@@ -72,7 +72,7 @@ See [INSTALL.md](INSTALL.md) for detailed build instructions for your platform.
 | **🌍 Universal Coverage** | 142 currencies covering 195 countries |
 | **👥 8 Billion Users** | Designed to scale to all of humanity |
 | **🔐 Proof of Personhood** | BrightID integration prevents Sybil attacks |
-| **💰 UBI Ready** | Built-in universal basic income (420 O/month proposal) |
+| **💰 UBI Vision** | Designed with universal basic income in mind (long-term goal) |
 | **♻️ Climate Funding** | Unlimited supply for environmental restoration |
 | **⚡ High Performance** | Targeting 100K+ TPS with Layer 2 solutions |
 | **🔓 Open Source** | MIT licensed, community-driven development |
@@ -232,8 +232,8 @@ A: Water is a universal basic need, impossible to manipulate, and has consistent
 **Q: Why 142 currencies instead of one?**  
 A: Different countries have different price levels. Each O currency reflects its national economy while maintaining equal value (1L water).
 
-**Q: How does UBI work?**  
-A: Everyone receives 420 O per month in their birth country's currency. Since 1 O = 1L water globally, everyone gets the same purchasing power.
+**Q: What about Universal Basic Income?**  
+A: UBI is a long-term vision for O Blockchain. The proposal is 420 O per month in each person's birth currency. Since 1 O = 1L water price globally, this would provide equal purchasing power everywhere. However, implementing UBI requires significant development, testing, and governance mechanisms that are not yet complete.
 
 **Q: Is this inflationary?**  
 A: No. Value is tied to water (constant need), not scarcity. We can generate unlimited supply without devaluation.
