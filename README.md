@@ -212,17 +212,6 @@ Join our growing community:
 - **🐦 Twitter/X**: [@OBlockchain](https://twitter.com/OBlockchain)
 - **🐙 GitHub**: [Issues](https://github.com/cno127/o-blockchain/issues) & [Discussions](https://github.com/cno127/o-blockchain/discussions)
 
-## 🗺️ Roadmap
-
-- ✅ **Phase 1**: Core Development (Complete)
-- ✅ **Phase 2**: Testing & Documentation (Complete)
-- 🔄 **Phase 3**: Testnet Launch (Current - Q1 2025)
-- 📅 **Phase 4**: Security Audits (Q2 2025)
-- 📅 **Phase 5**: Mainnet Launch (Q3 2025)
-- 📅 **Phase 6**: Global Adoption (2025-2030)
-
-See [Implementation Status](https://github.com/cno127/o-blockchain/wiki/Implementation-Status) for detailed progress.
-
 ## 📊 Key Statistics
 
 | Metric | Value |
