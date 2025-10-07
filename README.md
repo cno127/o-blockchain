@@ -236,8 +236,8 @@ Join our growing community:
 
 ## ❓ FAQ
 
-**Q: Why water as the peg?**  
-A: Water is a universal basic need, impossible to manipulate, and has consistent value globally. Unlike USD or gold, everyone needs it equally.
+**Q: Why water price as the peg?**  
+A: Water is a universal basic need with consistent relative value globally. Unlike USD or gold, everyone needs it equally. Since O is pegged to water price (not a fixed fiat amount), 1 O always equals 1 liter of water regardless of fiat price changes. If water prices rise in fiat currency, O's purchasing power self-adapts to maintain the 1:1 ratio with water.
 
 **Q: Why 142 currencies instead of one?**  
 A: Different countries have different price levels. Each O currency reflects its national economy while maintaining equal value (1L water).
