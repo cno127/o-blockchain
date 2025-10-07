@@ -219,7 +219,7 @@ Join our growing community:
 | **Currencies** | 142 O currencies |
 | **Countries** | 195+ covered |
 | **Target Users** | 8 billion (all humanity) |
-| **UBI Proposal** | 420 O per month |
+| **UBI Proposal** | To be determined by community |
 | **Consensus** | PoW (33%) + PoB (67%) |
 | **Block Time** | 10 minutes |
 | **Based On** | Bitcoin Core 27.0 |
@@ -233,7 +233,7 @@ A: Water is a universal basic need, impossible to manipulate, and has consistent
 A: Different countries have different price levels. Each O currency reflects its national economy while maintaining equal value (1L water).
 
 **Q: What about Universal Basic Income?**  
-A: UBI is a long-term vision for O Blockchain. The proposal is 420 O per month in each person's birth currency. Since 1 O = 1L water price globally, this would provide equal purchasing power everywhere. However, implementing UBI requires significant development, testing, and governance mechanisms that are not yet complete.
+A: UBI is a long-term vision for O Blockchain. If implemented, everyone would receive a monthly amount in their birth currency, providing equal purchasing power globally. The specific amount would be determined by community governance, not predetermined by developers. Implementing UBI requires significant development, testing, and governance mechanisms that are not yet complete.
 
 **Q: Is this inflationary?**  
 A: No. Value is tied to water (constant need), not scarcity. We can generate unlimited supply without devaluation.
