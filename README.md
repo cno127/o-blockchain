@@ -231,7 +231,7 @@ Join our growing community:
 A: Water is a universal basic need with consistent relative value globally. Unlike USD or gold, everyone needs it equally. Each O currency maintains 1 O = 1 liter of water in its local market. Exchange rates between O currencies are calculated from water price ratios (e.g., if water = $1.50 in USA and €1.20 in Europe, then 1 O_USD = 1.25 O_EUR). Economic incentives force market actors to maintain these theoretical rates.
 
 **Q: Why 142 currencies instead of one?**  
-A: Different countries have different price levels and fiat currencies. Each O currency maintains 1 O = 1 liter of water in its local market. O currencies have different values from each other - exchange rates are calculated from water price ratios and fiat exchange rates.
+A: Different countries have different price levels and fiat currencies. Each O currency maintains 1 O = 1 liter of water in its local market. O currencies have different values from each other - exchange rates are calculated from water price ratios and fiat exchange rates. Note: O_ONLY is a universal currency that exchanges 1:1 with all O currencies. It still maintains the water price peg through measurement and stabilization, allowing inflation correction regardless of fiat currency status.
 
 **Q: What about Universal Basic Income?**  
 A: UBI is a long-term vision for O Blockchain. If implemented, everyone would receive a monthly amount in their birth currency, providing equal purchasing power globally. The specific amount would be determined by community governance, not predetermined by developers. Implementing UBI requires significant development, testing, and governance mechanisms that are not yet complete.
