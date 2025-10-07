@@ -9,12 +9,22 @@ We welcome all feedback or suggestion as this is the very first draft and will c
 
 # O Blockchain
 
-> The world's first water-based stablecoin 
+> The world's first water price-based stablecoin - **Early Development / Prototype**
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](COPYING)
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
+[![Status](https://img.shields.io/badge/status-prototype-yellow.svg)]()
 [![Wiki](https://img.shields.io/badge/docs-wiki-blue.svg)](https://github.com/cno127/o-blockchain/wiki)
 [![Bitcoin Core](https://img.shields.io/badge/based%20on-Bitcoin%20Core%2027.0-orange.svg)](https://github.com/bitcoin/bitcoin)
+
+## ⚠️ Development Status
+
+**This is a prototype for discussion and feedback, not production-ready software.**
+
+- 🔬 **Stage**: Early development and architectural exploration
+- 🎯 **Purpose**: Demonstrate concepts and gather community input
+- ⚙️ **Code**: Written with prototyping in mind, not optimized for scale
+- 🧪 **Testing**: Requires extensive testing before any production use
+- 📝 **Feedback**: All suggestions and contributions welcome!
 
 ## 🌍 What is O Blockchain?
 
