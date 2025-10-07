@@ -9,7 +9,7 @@ We welcome all feedback or suggestion as this is the very first draft and will c
 
 # O Blockchain
 
-> The world's first water-based stablecoin with built-in Universal Basic Income
+> The world's first water-based stablecoin 
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](COPYING)
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
