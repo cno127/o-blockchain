@@ -93,7 +93,7 @@ See [INSTALL.md](INSTALL.md) for detailed build instructions for your platform.
 
 1. **Water Price Measurement**: Users measure bottled water prices globally
 2. **Multi-Currency System**: 142 separate O currencies match national currencies
-3. **Stabilization Mining**: Economic incentives (penalties for deviators, rewards for stabilizers) force all actors to respect the measured water price ratio. Core principle: offender fines reward the offended
+3. **Stabilization Mining**: When exchange rates deviate from measured water prices, new coins are created and distributed to stable currency holders, diluting unstable holders. Core principle: offender fines reward the offended through coin creation/dilution
 4. **Proof of Personhood**: BrightID ensures one person = one identity
 5. **Universal Basic Income**: Everyone receives same purchasing power
 
