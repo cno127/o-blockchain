@@ -22,7 +22,7 @@ O Blockchain is a revolutionary cryptocurrency system that provides stable, univ
 
 ### Core Principles
 
-- **💧 Water-Based Stability**: 1 O = 1 liter of bottled water (universal basic need)
+- **💧 Water Price-Based Stability**: 1 O = 1 liter of bottled water price (universal basic need)
 - **🌍 142 Global Currencies**: One O currency per national currency (O_USD, O_EUR, O_JPY, etc.)
 - **⚖️ Economic Equality**: Same purchasing power for everyone, everywhere
 - **🌱 Climate Restoration**: Unlimited, debt-free funding for environmental projects
@@ -83,7 +83,7 @@ See [INSTALL.md](INSTALL.md) for detailed build instructions for your platform.
 
 1. **Water Price Measurement**: Users measure bottled water prices globally
 2. **Multi-Currency System**: 142 separate O currencies match national currencies
-3. **Stabilization Mining**: Dynamic rewards maintain 1 O = 1L water ratio
+3. **Stabilization Mining**: Economic incentives (penalties for deviators, rewards for stabilizers) force all actors to respect the measured water price ratio. Core principle: offender fines reward the offended
 4. **Proof of Personhood**: BrightID ensures one person = one identity
 5. **Universal Basic Income**: Everyone receives same purchasing power
 
