@@ -82,11 +82,15 @@ See [INSTALL.md](INSTALL.md) for detailed build instructions for your platform.
 
 ### How It Works
 
-1. **Water Price Measurement**: Users measure bottled water prices globally
-2. **Multi-Currency System**: 142 separate O currencies match national currencies
-3. **Stabilization Mining**: When exchange rates deviate from measured water prices, new coins are created and distributed to stable currency holders, diluting unstable holders. Core principle: offender fines reward the offended through coin creation/dilution
-4. **Proof of Personhood**: BrightID ensures one person = one identity
-5. **Universal Basic Income**: Everyone receives same purchasing power
+1. **Water Price Measurement & Exchange Rate Setting**: Users and online bots measure bottled water prices (0.9-1.1L containers) globally in their local fiat currencies. Data is captured online through URL or offline with pictures and GPS proof, then validated by human users. The Gaussian average of measurements establishes each O currency's value (e.g., if water costs $1.50/L in USD, then 1 O_USD = $1.50). Cross-currency rates are calculated from these values.
+
+2. **Stability Monitoring**: Users and online bots measure actual market exchange rates between O currencies and fiat currencies. The system compares observed rates with theoretical rates (measured water prices) to determine if each currency is stable.
+
+3. **Stabilization Through Economic Incentives**: When market exchange rates deviate from theoretical rates (measured water prices), new coins are created and given to stable currency users, diluting unstable currencies. This creates economic pressure to maintain the water price peg. Core principle: the offender's sanction can be the reward of the offended.
+
+4. **Proof of Personhood**: BrightID ensures one person = one identity through decentralized social graph verification.
+
+5. **Universal Basic Income (Long-term Vision)**: Designed to eventually provide equal purchasing power globally, with amount determined by community governance.
 
 ### Technical Stack
 
