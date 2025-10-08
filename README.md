@@ -110,7 +110,7 @@ All comprehensive documentation is available in our **[GitHub Wiki](https://gith
 - **[Quick Start Guide](https://github.com/cno127/o-blockchain/wiki/Quick-Start-Guide)** - Get up and running in 5 minutes
 - **[Architecture Overview](https://github.com/cno127/o-blockchain/wiki/Architecture-Overview)** - How O Blockchain works
 - **[Multi-Currency System](https://github.com/cno127/o-blockchain/wiki/Multi-Currency-Architecture)** - 142 global currencies explained
-- **[Measurement System](https://github.com/cno127/o-blockchain/wiki/Measurement-System-Overview)** - Water price calibration
+- **[Measurement System](https://github.com/cno127/o-blockchain/wiki/Measurement-System-Overview)** - Multi-layer validation system for water price measurements
 - **[Stabilization System](https://github.com/cno127/o-blockchain/wiki/Stabilization-System)** - How stability is maintained
 
 ### 💰 Economic Model
