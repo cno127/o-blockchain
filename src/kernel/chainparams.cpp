@@ -147,7 +147,7 @@ public:
         uint32_t genesis_nonce = 123456789; // Placeholder nonce
         uint32_t genesis_bits = 0x1d00ffff; // Same difficulty as Bitcoin
         int32_t genesis_version = 1;
-        CAmount genesis_reward = 50 * COIN; // Initial reward (will be constant, no halving)
+        CAmount genesis_reward = 700 * COIN; // Initial reward (will be constant, no halving)
         
         genesis = CreateGenesisBlock(o_genesis_msg, o_genesis_script, genesis_time, genesis_nonce, genesis_bits, genesis_version, genesis_reward);
         consensus.hashGenesisBlock = genesis.GetHash();
@@ -238,7 +238,7 @@ public:
         m_assumed_blockchain_size = 200;
         m_assumed_chain_state_size = 19;
 
-        genesis = CreateGenesisBlock(1296688602, 414098458, 0x1d00ffff, 1, 50 * COIN);
+        genesis = CreateGenesisBlock(1296688602, 414098458, 0x1d00ffff, 1, 700 * COIN);
         consensus.hashGenesisBlock = genesis.GetHash();
         assert(consensus.hashGenesisBlock == uint256{"000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943"});
         assert(genesis.hashMerkleRoot == uint256{"4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"});
@@ -342,7 +342,7 @@ public:
                 393743547,
                 0x1d00ffff,
                 1,
-                50 * COIN);
+                700 * COIN);
         consensus.hashGenesisBlock = genesis.GetHash();
         assert(consensus.hashGenesisBlock == uint256{"00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043"});
         assert(genesis.hashMerkleRoot == uint256{"7aa0a7ae1e223414cb807e40cd57e667b718e42aaf9306db9102fe28912b7b4e"});
@@ -465,7 +465,7 @@ public:
         nDefaultPort = 38333;
         nPruneAfterHeight = 1000;
 
-        genesis = CreateGenesisBlock(1598918400, 52613770, 0x1e0377ae, 1, 50 * COIN);
+        genesis = CreateGenesisBlock(1598918400, 52613770, 0x1e0377ae, 1, 700 * COIN);
         consensus.hashGenesisBlock = genesis.GetHash();
         assert(consensus.hashGenesisBlock == uint256{"00000008819873e925422c1ff0f99f7cc9bbb232af63a077a480a3633bee1ef6"});
         assert(genesis.hashMerkleRoot == uint256{"4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"});
