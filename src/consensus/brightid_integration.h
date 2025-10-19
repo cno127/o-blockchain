@@ -54,15 +54,19 @@ struct BrightIDUser {
           trust_score(0.0), is_active(false) {}
     
     SERIALIZE_METHODS(BrightIDUser, obj) {
+        // Convert double to int64_t for serialization (6 decimal precision)
+        int64_t trust_score_int = static_cast<int64_t>(obj.trust_score * 1000000);
         uint8_t status_val = static_cast<uint8_t>(obj.status);
         uint8_t method_val = static_cast<uint8_t>(obj.method);
+        
         READWRITE(obj.brightid_address, obj.context_id, status_val, method_val,
                   obj.verification_timestamp, obj.expiration_timestamp,
-                  obj.sponsor_address, obj.connections, obj.trust_score, obj.is_active);
-        if (ser_action.ForRead()) {
-            obj.status = static_cast<BrightIDStatus>(status_val);
-            obj.method = static_cast<BrightIDVerificationMethod>(method_val);
-        }
+                  obj.sponsor_address, obj.connections, trust_score_int, obj.is_active);
+        
+        // On read, convert back from int64_t to double
+        SER_READ(obj, obj.status = static_cast<BrightIDStatus>(status_val));
+        SER_READ(obj, obj.method = static_cast<BrightIDVerificationMethod>(method_val));
+        SER_READ(obj, obj.trust_score = static_cast<double>(trust_score_int) / 1000000.0);
     }
     
     bool IsVerified() const { return status == BrightIDStatus::VERIFIED || 
@@ -250,14 +254,11 @@ private:
     bool m_data_retention;
     int64_t m_retention_period;
     
-    // Storage
-    std::map<std::string, BrightIDUser> m_users;
-    std::map<std::string, std::string> m_brightid_to_o_address;
-    std::map<std::string, std::string> m_o_to_brightid_address;
-    std::map<std::string, std::string> m_anonymous_ids;
-    std::map<std::string, double> m_anonymous_reputations;
+    // RAM storage removed - now using persistent database (o_brightid_db.h)
+    // All user data, mappings, and anonymous IDs now stored in g_brightid_db
+    // This allows scaling to billions of users without memory constraints
     
-    // Statistics
+    // Statistics (kept in RAM for fast access, can be rebuilt from DB)
     struct BrightIDStats {
         int64_t total_users;
         int64_t verified_users;

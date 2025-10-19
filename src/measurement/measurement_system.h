@@ -69,11 +69,17 @@ struct AutomatedValidationInfo {
           location_valid(true), validation_timestamp(0) {}
     
     SERIALIZE_METHODS(AutomatedValidationInfo, obj) {
+        // Convert double to int64_t for serialization (6 decimal precision)
+        int64_t gaussian_deviation_int = static_cast<int64_t>(obj.gaussian_deviation * 1000000);
         uint8_t result_val = static_cast<uint8_t>(obj.result);
-        READWRITE(result_val, obj.failure_reason, obj.gaussian_deviation,
+        
+        READWRITE(result_val, obj.failure_reason, gaussian_deviation_int,
                   obj.timestamp_valid, obj.url_accessible, obj.location_valid,
                   obj.validation_timestamp);
-        if (ser_action.ForRead()) obj.result = static_cast<AutomatedValidationResult>(result_val);
+        
+        // On read, convert back from int64_t to double
+        SER_READ(obj, obj.result = static_cast<AutomatedValidationResult>(result_val));
+        SER_READ(obj, obj.gaussian_deviation = static_cast<double>(gaussian_deviation_int) / 1000000.0);
     }
 };
 
@@ -105,13 +111,21 @@ struct WaterPriceMeasurement {
           confidence_score(0.0), invite_id(), source(MeasurementSource::USER_ONLINE) {}
     
     SERIALIZE_METHODS(WaterPriceMeasurement, obj) {
+        // Convert doubles to int64_t for serialization (6 decimal precision)
+        int64_t volume_int = static_cast<int64_t>(obj.volume * 1000000);
+        int64_t confidence_int = static_cast<int64_t>(obj.confidence_score * 1000000);
         uint8_t source_val = static_cast<uint8_t>(obj.source);
+        
         READWRITE(obj.measurement_id, obj.submitter, obj.currency_code, obj.price,
-                  obj.volume, obj.volume_unit, obj.price_per_liter,
+                  volume_int, obj.volume_unit, obj.price_per_liter,
                   obj.location, obj.source_url, obj.proof_image_hash, obj.timestamp, obj.block_height,
-                  obj.is_validated, obj.validators, obj.confidence_score, obj.invite_id,
+                  obj.is_validated, obj.validators, confidence_int, obj.invite_id,
                   source_val, obj.auto_validation);
-        if (ser_action.ForRead()) obj.source = static_cast<MeasurementSource>(source_val);
+        
+        // On read, convert back from int64_t to double
+        SER_READ(obj, obj.volume = static_cast<double>(volume_int) / 1000000.0);
+        SER_READ(obj, obj.confidence_score = static_cast<double>(confidence_int) / 1000000.0);
+        SER_READ(obj, obj.source = static_cast<MeasurementSource>(source_val));
     }
     
     uint256 GetHash() const;
@@ -141,12 +155,18 @@ struct ExchangeRateMeasurement {
           block_height(0), is_validated(false), invite_id(), source(MeasurementSource::USER_ONLINE) {}
     
     SERIALIZE_METHODS(ExchangeRateMeasurement, obj) {
+        // Convert double to int64_t for serialization (6 decimal precision)
+        int64_t exchange_rate_int = static_cast<int64_t>(obj.exchange_rate * 1000000);
         uint8_t source_val = static_cast<uint8_t>(obj.source);
+        
         READWRITE(obj.measurement_id, obj.submitter, obj.from_currency, obj.to_currency,
-                  obj.exchange_rate, obj.location, obj.source_url, obj.proof_image_hash, obj.timestamp,
+                  exchange_rate_int, obj.location, obj.source_url, obj.proof_image_hash, obj.timestamp,
                   obj.block_height, obj.is_validated, obj.validators, obj.invite_id,
                   source_val, obj.auto_validation);
-        if (ser_action.ForRead()) obj.source = static_cast<MeasurementSource>(source_val);
+        
+        // On read, convert back from int64_t to double
+        SER_READ(obj, obj.source = static_cast<MeasurementSource>(source_val));
+        SER_READ(obj, obj.exchange_rate = static_cast<double>(exchange_rate_int) / 1000000.0);
     }
     
     uint256 GetHash() const;
@@ -174,7 +194,7 @@ struct MeasurementInvite {
         READWRITE(obj.invite_id, obj.invited_user, type_val,
                   obj.currency_code, obj.created_at, obj.expires_at, obj.is_used,
                   obj.is_expired, obj.block_height);
-        if (ser_action.ForRead()) obj.type = static_cast<MeasurementType>(type_val);
+        SER_READ(obj, obj.type = static_cast<MeasurementType>(type_val));
     }
     
     bool IsValid(int64_t current_time) const;
@@ -201,11 +221,17 @@ struct ValidatedURL {
           validation_count(0), block_height(0) {}
     
     SERIALIZE_METHODS(ValidatedURL, obj) {
+        // Convert double to int64_t for serialization (6 decimal precision)
+        int64_t reliability_int = static_cast<int64_t>(obj.reliability_score * 1000000);
         uint8_t type_val = static_cast<uint8_t>(obj.type);
+        
         READWRITE(obj.url_id, obj.url, type_val, obj.currency_code,
                   obj.submitter, obj.validators, obj.last_checked, obj.is_active,
-                  obj.reliability_score, obj.validation_count, obj.block_height);
-        if (ser_action.ForRead()) obj.type = static_cast<MeasurementType>(type_val);
+                  reliability_int, obj.validation_count, obj.block_height);
+        
+        // On read, convert back from int64_t to double
+        SER_READ(obj, obj.type = static_cast<MeasurementType>(type_val));
+        SER_READ(obj, obj.reliability_score = static_cast<double>(reliability_int) / 1000000.0);
     }
     
     uint256 GetHash() const;
@@ -263,8 +289,18 @@ struct AverageWithConfidence {
     }
     
     SERIALIZE_METHODS(AverageWithConfidence, obj) {
-        READWRITE(obj.value, obj.measurement_count, obj.std_deviation, 
-                  obj.confidence_level, obj.is_statistically_significant);
+        // Convert doubles to int64_t for serialization (6 decimal precision)
+        int64_t value_int = static_cast<int64_t>(obj.value * 1000000);
+        int64_t std_deviation_int = static_cast<int64_t>(obj.std_deviation * 1000000);
+        uint8_t confidence_val = static_cast<uint8_t>(obj.confidence_level);
+        
+        READWRITE(value_int, obj.measurement_count, std_deviation_int, 
+                  confidence_val, obj.is_statistically_significant);
+        
+        // On read, convert back from int64_t to double
+        SER_READ(obj, obj.value = static_cast<double>(value_int) / 1000000.0);
+        SER_READ(obj, obj.std_deviation = static_cast<double>(std_deviation_int) / 1000000.0);
+        SER_READ(obj, obj.confidence_level = static_cast<ConfidenceLevel>(confidence_val));
     }
 };
 
@@ -287,9 +323,21 @@ struct DailyAverage {
           confidence_level(ConfidenceLevel::INSUFFICIENT_DATA), is_statistically_significant(false) {}
     
     SERIALIZE_METHODS(DailyAverage, obj) {
-        READWRITE(obj.currency_code, obj.date, obj.avg_water_price, obj.avg_exchange_rate,
-                  obj.measurement_count, obj.std_deviation, obj.is_stable, obj.block_height,
-                  obj.confidence_level, obj.is_statistically_significant);
+        // Convert doubles to int64_t for serialization (6 decimal precision)
+        int64_t avg_water_price_int = static_cast<int64_t>(obj.avg_water_price * 1000000);
+        int64_t avg_exchange_rate_int = static_cast<int64_t>(obj.avg_exchange_rate * 1000000);
+        int64_t std_deviation_int = static_cast<int64_t>(obj.std_deviation * 1000000);
+        uint8_t confidence_val = static_cast<uint8_t>(obj.confidence_level);
+        
+        READWRITE(obj.currency_code, obj.date, avg_water_price_int, avg_exchange_rate_int,
+                  obj.measurement_count, std_deviation_int, obj.is_stable, obj.block_height,
+                  confidence_val, obj.is_statistically_significant);
+        
+        // On read, convert back from int64_t to double
+        SER_READ(obj, obj.avg_water_price = static_cast<double>(avg_water_price_int) / 1000000.0);
+        SER_READ(obj, obj.avg_exchange_rate = static_cast<double>(avg_exchange_rate_int) / 1000000.0);
+        SER_READ(obj, obj.std_deviation = static_cast<double>(std_deviation_int) / 1000000.0);
+        SER_READ(obj, obj.confidence_level = static_cast<ConfidenceLevel>(confidence_val));
     }
 };
 

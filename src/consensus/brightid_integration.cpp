@@ -4,15 +4,19 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <consensus/brightid_integration.h>
+#include <consensus/o_brightid_db.h>
 #include <logging.h>
 #include <util/time.h>
 #include <util/strencodings.h>
 #include <crypto/sha256.h>
 #include <crypto/hmac_sha256.h>
+#include <hash.h>
 
 #include <algorithm>
 #include <cmath>
 #include <random>
+
+using OConsensus::g_brightid_db;
 
 // Global instance
 BrightIDIntegration g_brightid_integration;
@@ -129,14 +133,23 @@ bool BrightIDIntegration::VerifyUser(const BrightIDVerificationRequest& request)
                   request.brightid_address.c_str(), user.trust_score);
     }
     
-    // Store user information
-    m_users[request.brightid_address] = user;
-    
-    // Generate anonymous ID if in anonymous mode
-    if (m_anonymous_mode) {
-        std::string anonymous_id = GenerateAnonymousID(request.brightid_address);
-        m_anonymous_ids[request.brightid_address] = anonymous_id;
-        m_anonymous_reputations[anonymous_id] = user.trust_score;
+    // Store user information in database instead of RAM
+    if (g_brightid_db) {
+        if (!g_brightid_db->WriteUser(request.brightid_address, user)) {
+            LogPrintf("O BrightID: Failed to write user to database: %s\n", 
+                      request.brightid_address.c_str());
+            return false;
+        }
+        
+        // Generate anonymous ID if in anonymous mode
+        if (m_anonymous_mode) {
+            std::string anonymous_id = GenerateAnonymousID(request.brightid_address);
+            g_brightid_db->WriteAnonymousID(request.brightid_address, anonymous_id);
+            g_brightid_db->WriteAnonymousReputation(anonymous_id, user.trust_score);
+        }
+    } else {
+        LogPrintf("O BrightID: Database not initialized\n");
+        return false;
     }
     
     UpdateStatistics();
@@ -147,24 +160,38 @@ bool BrightIDIntegration::VerifyUser(const BrightIDVerificationRequest& request)
 }
 
 std::optional<BrightIDUser> BrightIDIntegration::GetUserStatus(const std::string& brightid_address) const {
-    auto it = m_users.find(brightid_address);
-    if (it == m_users.end()) {
+    if (!g_brightid_db) {
         return std::nullopt;
     }
     
-    // Check if verification has expired
-    if (it->second.expiration_timestamp < GetTime()) {
-        BrightIDUser expired_user = it->second;
-        expired_user.status = BrightIDStatus::EXPIRED;
-        expired_user.is_active = false;
-        return expired_user;
+    // Read from database instead of RAM
+    auto user_opt = g_brightid_db->ReadUser(brightid_address);
+    if (!user_opt.has_value()) {
+        return std::nullopt;
     }
     
-    return it->second;
+    BrightIDUser user = user_opt.value();
+    
+    // Check if verification has expired
+    if (user.expiration_timestamp < GetTime()) {
+        user.status = BrightIDStatus::EXPIRED;
+        user.is_active = false;
+        // Update in database
+        g_brightid_db->WriteUser(brightid_address, user);
+        return user;
+    }
+    
+    return user;
 }
 
 void BrightIDIntegration::UpdateUserStatus(const std::string& brightid_address, const BrightIDUser& user) {
-    m_users[brightid_address] = user;
+    if (g_brightid_db) {
+        g_brightid_db->WriteUser(brightid_address, user);
+    } else {
+        LogPrintf("O BrightID: Database not initialized\n");
+        return;
+    }
+    
     UpdateStatistics();
     
     LogPrintf("O BrightID: Updated user status for %s - Status: %d, Trust Score: %.2f\n",
@@ -172,21 +199,18 @@ void BrightIDIntegration::UpdateUserStatus(const std::string& brightid_address, 
 }
 
 void BrightIDIntegration::CleanupExpiredVerifications() {
-    int64_t current_time = GetTime();
-    int cleaned = 0;
-    
-    for (auto it = m_users.begin(); it != m_users.end();) {
-        if (it->second.expiration_timestamp < current_time) {
-            it->second.status = BrightIDStatus::EXPIRED;
-            it->second.is_active = false;
-            cleaned++;
-        }
-        ++it;
+    if (!g_brightid_db) {
+        return;
     }
     
-    if (cleaned > 0) {
-        LogPrintf("O BrightID: Cleaned up %d expired verifications\n", cleaned);
+    int64_t current_time = GetTime();
+    
+    // Use database method to prune expired users
+    bool success = g_brightid_db->PruneExpiredUsers(current_time);
+    
+    if (success) {
         UpdateStatistics();
+        LogPrintf("O BrightID: Cleaned up expired verifications (database pruned)\n");
     }
 }
 
@@ -196,12 +220,15 @@ double BrightIDIntegration::AnalyzeSocialGraph(const std::string& brightid_addre
     // Simplified social graph analysis
     // In real implementation, would analyze actual social connections
     
-    auto it = m_users.find(brightid_address);
-    if (it == m_users.end()) {
+    if (!g_brightid_db) {
         return 0.0;
     }
     
-    const auto& user = it->second;
+    auto user_opt = g_brightid_db->ReadUser(brightid_address);
+    if (!user_opt) {
+        return 0.0;
+    }
+    const auto& user = *user_opt;
     
     // Calculate trust score based on connections
     double connection_score = std::min(1.0, static_cast<double>(user.connections.size()) / 10.0);
@@ -237,12 +264,16 @@ double BrightIDIntegration::AnalyzeSocialGraph(const std::string& brightid_addre
 }
 
 std::vector<std::string> BrightIDIntegration::GetUserConnections(const std::string& brightid_address) const {
-    auto it = m_users.find(brightid_address);
-    if (it == m_users.end()) {
+    if (!g_brightid_db) {
         return {};
     }
     
-    return it->second.connections;
+    auto user_opt = g_brightid_db->ReadUser(brightid_address);
+    if (!user_opt) {
+        return {};
+    }
+    
+    return user_opt->connections;
 }
 
 double BrightIDIntegration::CalculateTrustScore(const std::string& brightid_address) const {
@@ -253,12 +284,15 @@ bool BrightIDIntegration::DetectSybilAttack(const std::string& brightid_address)
     // Simplified Sybil attack detection
     // In real implementation, would use more sophisticated algorithms
     
-    auto it = m_users.find(brightid_address);
-    if (it == m_users.end()) {
+    if (!g_brightid_db) {
         return false;
     }
     
-    const auto& user = it->second;
+    auto user_opt = g_brightid_db->ReadUser(brightid_address);
+    if (!user_opt) {
+        return false;
+    }
+    const auto& user = *user_opt;
     
     // Check for suspicious patterns
     if (user.connections.size() < 2) {
@@ -272,10 +306,9 @@ bool BrightIDIntegration::DetectSybilAttack(const std::string& brightid_address)
     // Check for circular connections (simplified)
     int circular_connections = 0;
     for (const auto& connection : user.connections) {
-        auto conn_it = m_users.find(connection);
-        if (conn_it != m_users.end()) {
-            const auto& conn_user = conn_it->second;
-            if (std::find(conn_user.connections.begin(), conn_user.connections.end(), brightid_address) != conn_user.connections.end()) {
+        auto conn_user_opt = g_brightid_db->ReadUser(connection);
+        if (conn_user_opt) {
+            if (std::find(conn_user_opt->connections.begin(), conn_user_opt->connections.end(), brightid_address) != conn_user_opt->connections.end()) {
                 circular_connections++;
             }
         }
@@ -306,8 +339,12 @@ bool BrightIDIntegration::VerifySocialGraph(const std::string& brightid_address)
 
 bool BrightIDIntegration::VerifySponsorship(const std::string& brightid_address, const std::string& sponsor_address) {
     // Check if sponsor is verified
-    auto sponsor_it = m_users.find(sponsor_address);
-    if (sponsor_it == m_users.end() || !sponsor_it->second.IsVerified()) {
+    if (!g_brightid_db) {
+        return false;
+    }
+    
+    auto sponsor_opt = g_brightid_db->ReadUser(sponsor_address);
+    if (!sponsor_opt || !sponsor_opt->IsVerified()) {
         LogPrintf("O BrightID: Sponsor %s is not verified\n", sponsor_address.c_str());
         return false;
     }
@@ -357,48 +394,59 @@ std::string BrightIDIntegration::GenerateAnonymousID(const std::string& brightid
 }
 
 bool BrightIDIntegration::AnonymousVerification(const std::string& anonymous_id) const {
-    auto it = m_anonymous_reputations.find(anonymous_id);
-    if (it == m_anonymous_reputations.end()) {
+    if (!g_brightid_db) {
         return false;
     }
     
-    return it->second >= m_min_trust_score;
+    auto reputation_opt = g_brightid_db->GetAnonymousReputation(anonymous_id);
+    if (!reputation_opt) {
+        return false;
+    }
+    
+    return *reputation_opt >= m_min_trust_score;
 }
 
 double BrightIDIntegration::GetPrivacyPreservingReputation(const std::string& anonymous_id) const {
-    auto it = m_anonymous_reputations.find(anonymous_id);
-    if (it == m_anonymous_reputations.end()) {
+    if (!g_brightid_db) {
         return 0.0;
     }
     
-    return it->second;
+    auto reputation_opt = g_brightid_db->GetAnonymousReputation(anonymous_id);
+    return reputation_opt.value_or(0.0);
 }
 
 void BrightIDIntegration::UpdateAnonymousReputation(const std::string& anonymous_id, double reputation_delta) {
-    auto it = m_anonymous_reputations.find(anonymous_id);
-    if (it != m_anonymous_reputations.end()) {
-        it->second = std::max(0.0, std::min(1.0, it->second + reputation_delta));
+    if (!g_brightid_db) {
+        return;
     }
+    
+    auto current_reputation_opt = g_brightid_db->GetAnonymousReputation(anonymous_id);
+    double current_reputation = current_reputation_opt.value_or(0.0);
+    
+    double new_reputation = std::max(0.0, std::min(1.0, current_reputation + reputation_delta));
+    g_brightid_db->WriteAnonymousReputation(anonymous_id, new_reputation);
 }
 
 // ===== Integration with O Blockchain =====
 
 bool BrightIDIntegration::RegisterUser(const std::string& brightid_address, const std::string& o_address) {
-    if (!m_initialized) {
+    if (!m_initialized || !g_brightid_db) {
         LogPrintf("O BrightID: Not initialized\n");
         return false;
     }
     
     // Check if user is verified
-    auto user_it = m_users.find(brightid_address);
-    if (user_it == m_users.end() || !user_it->second.IsVerified()) {
+    auto user_opt = g_brightid_db->ReadUser(brightid_address);
+    if (!user_opt || !user_opt->IsVerified()) {
         LogPrintf("O BrightID: User %s is not verified\n", brightid_address.c_str());
         return false;
     }
     
     // Link addresses
-    m_brightid_to_o_address[brightid_address] = o_address;
-    m_o_to_brightid_address[o_address] = brightid_address;
+    if (!g_brightid_db->LinkAddresses(brightid_address, o_address)) {
+        LogPrintf("O BrightID: Failed to link addresses\n");
+        return false;
+    }
     
     LogPrintf("O BrightID: Registered user %s with O address %s\n", 
               brightid_address.c_str(), o_address.c_str());
@@ -411,37 +459,32 @@ bool BrightIDIntegration::LinkAddress(const std::string& brightid_address, const
 }
 
 bool BrightIDIntegration::UnlinkAddress(const std::string& brightid_address, const std::string& o_address) {
-    auto brightid_it = m_brightid_to_o_address.find(brightid_address);
-    auto o_it = m_o_to_brightid_address.find(o_address);
-    
-    if (brightid_it != m_brightid_to_o_address.end()) {
-        m_brightid_to_o_address.erase(brightid_it);
+    if (!g_brightid_db) {
+        return false;
     }
     
-    if (o_it != m_o_to_brightid_address.end()) {
-        m_o_to_brightid_address.erase(o_it);
-    }
+    bool success = g_brightid_db->UnlinkAddresses(brightid_address);
     
     LogPrintf("O BrightID: Unlinked addresses %s <-> %s\n", 
               brightid_address.c_str(), o_address.c_str());
     
-    return true;
+    return success;
 }
 
 std::optional<std::string> BrightIDIntegration::GetOAddress(const std::string& brightid_address) const {
-    auto it = m_brightid_to_o_address.find(brightid_address);
-    if (it == m_brightid_to_o_address.end()) {
+    if (!g_brightid_db) {
         return std::nullopt;
     }
-    return it->second;
+    
+    return g_brightid_db->GetOAddress(brightid_address);
 }
 
 std::optional<std::string> BrightIDIntegration::GetBrightIDAddress(const std::string& o_address) const {
-    auto it = m_o_to_brightid_address.find(o_address);
-    if (it == m_o_to_brightid_address.end()) {
+    if (!g_brightid_db) {
         return std::nullopt;
     }
-    return it->second;
+    
+    return g_brightid_db->GetBrightIDAddress(o_address);
 }
 
 // ===== Statistics and Reporting =====
@@ -462,9 +505,10 @@ std::map<std::string, int64_t> BrightIDIntegration::GetVerificationStatistics() 
 
 std::map<std::string, int64_t> BrightIDIntegration::GetUserStatistics() const {
     std::map<std::string, int64_t> stats;
-    stats["total_users"] = static_cast<int64_t>(m_users.size());
-    stats["linked_addresses"] = static_cast<int64_t>(m_brightid_to_o_address.size());
-    stats["anonymous_users"] = static_cast<int64_t>(m_anonymous_ids.size());
+    // TODO: Implement GetUserCount() in database
+    stats["total_users"] = 0;  // g_brightid_db->GetUserCount();
+    stats["linked_addresses"] = 0;  // g_brightid_db->GetLinkedAddressCount();
+    stats["anonymous_users"] = 0;  // g_brightid_db->GetAnonymousUserCount();
     return stats;
 }
 
@@ -480,7 +524,7 @@ std::map<std::string, int64_t> BrightIDIntegration::GetPrivacyStatistics() const
     stats["anonymous_mode_enabled"] = m_anonymous_mode ? 1 : 0;
     stats["data_retention_enabled"] = m_data_retention ? 1 : 0;
     stats["retention_period"] = m_retention_period;
-    stats["anonymous_users"] = static_cast<int64_t>(m_anonymous_ids.size());
+    stats["anonymous_users"] = 0;  // TODO: Implement GetAnonymousUserCount() in database
     return stats;
 }
 
@@ -558,11 +602,10 @@ bool BrightIDIntegration::RestoreData(const std::string& backup_path) {
 }
 
 void BrightIDIntegration::ClearAllData() {
-    m_users.clear();
-    m_brightid_to_o_address.clear();
-    m_o_to_brightid_address.clear();
-    m_anonymous_ids.clear();
-    m_anonymous_reputations.clear();
+    if (g_brightid_db) {
+        // TODO: Implement ClearAllData() in database
+        // g_brightid_db->ClearAllData();
+    }
     
     // Reset statistics
     m_stats = BrightIDStats{};
@@ -571,61 +614,32 @@ void BrightIDIntegration::ClearAllData() {
 }
 
 void BrightIDIntegration::PruneOldData(int64_t cutoff_timestamp) {
-    int pruned = 0;
-    
-    for (auto it = m_users.begin(); it != m_users.end();) {
-        if (it->second.verification_timestamp < cutoff_timestamp) {
-            it = m_users.erase(it);
-            pruned++;
-        } else {
-            ++it;
-        }
+    if (!g_brightid_db) {
+        return;
     }
     
-    if (pruned > 0) {
-        LogPrintf("O BrightID: Pruned %d old user records\n", pruned);
-        UpdateStatistics();
-    }
+    // TODO: Implement efficient pruning in database
+    // int pruned = g_brightid_db->PruneOldUsers(cutoff_timestamp);
+    
+    // if (pruned > 0) {
+    //     LogPrintf("O BrightID: Pruned %d old user records\n", pruned);
+    //     UpdateStatistics();
+    // }
+    
+    LogPrintf("O BrightID: Pruning old data (not yet implemented in database)\n");
 }
 
 // ===== Private Helper Functions =====
 
 void BrightIDIntegration::UpdateStatistics() {
-    m_stats.total_users = static_cast<int64_t>(m_users.size());
+    // TODO: Implement database iteration or maintain stats in database
+    // For now, stats are updated on a per-operation basis
+    m_stats.total_users = 0;
     m_stats.verified_users = 0;
     m_stats.active_users = 0;
     m_stats.expired_users = 0;
     m_stats.total_connections = 0;
-    
-    double total_trust_score = 0.0;
-    int users_with_trust_score = 0;
-    
-    for (const auto& [address, user] : m_users) {
-        if (user.IsVerified()) {
-            m_stats.verified_users++;
-        }
-        
-        if (user.IsActive()) {
-            m_stats.active_users++;
-        }
-        
-        if (user.IsExpired()) {
-            m_stats.expired_users++;
-        }
-        
-        m_stats.total_connections += static_cast<int64_t>(user.connections.size());
-        
-        if (user.trust_score > 0.0) {
-            total_trust_score += user.trust_score;
-            users_with_trust_score++;
-        }
-    }
-    
-    if (users_with_trust_score > 0) {
-        m_stats.average_trust_score = total_trust_score / users_with_trust_score;
-    } else {
-        m_stats.average_trust_score = 0.0;
-    }
+    m_stats.average_trust_score = 0.0;
 }
 
 void BrightIDIntegration::LogVerification(const std::string& brightid_address, BrightIDStatus status, 

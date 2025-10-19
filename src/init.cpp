@@ -20,6 +20,9 @@
 #include <common/system.h>
 #include <consensus/amount.h>
 #include <consensus/consensus.h>
+#include <consensus/o_brightid_db.h>
+#include <consensus/o_business_db.h>
+#include <measurement/o_measurement_db.h>
 #include <deploymentstatus.h>
 #include <hash.h>
 #include <httprpc.h>
@@ -1732,6 +1735,48 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
 
     // Init indexes
     for (auto index : node.indexes) if (!index->Init()) return false;
+
+    // ********************************************************* Step 8b: Initialize O Blockchain databases
+    
+    LogPrintf("Initializing O Blockchain databases...\n");
+    
+    // Calculate cache sizes for O databases
+    size_t brightid_cache = kernel_cache_sizes.coins_db / 10;     // 10% - For billions of users
+    size_t measurement_cache = kernel_cache_sizes.coins_db / 4;  // 25% - CRITICAL: water price data
+    size_t business_cache = kernel_cache_sizes.coins_db / 20;    // 5% - business miners
+    
+    try {
+        // Initialize Measurement Database (CRITICAL: water prices, exchange rates)
+        OMeasurement::g_measurement_db = std::make_unique<OMeasurement::CMeasurementDB>(
+            measurement_cache,
+            false,  // Not memory-only
+            do_reindex  // Wipe if reindexing
+        );
+        LogPrintf("* Using %.1f MiB for measurement database (water prices, exchange rates, invites)\n", 
+                  measurement_cache * (1.0 / 1024 / 1024));
+        
+        // Initialize BrightID User Database (Proof of Personhood)
+        OConsensus::g_brightid_db = std::make_unique<OConsensus::CBrightIDUserDB>(
+            brightid_cache,
+            false,  // Not memory-only
+            do_reindex  // Wipe if reindexing
+        );
+        LogPrintf("* Using %.1f MiB for BrightID user database\n", 
+                  brightid_cache * (1.0 / 1024 / 1024));
+        
+        // Initialize Business Miner Database (Proof of Business)
+        OConsensus::g_business_db = std::make_unique<OConsensus::CBusinessMinerDB>(
+            business_cache,
+            false,  // Not memory-only
+            do_reindex  // Wipe if reindexing
+        );
+        LogPrintf("* Using %.1f MiB for business miner database\n", 
+                  business_cache * (1.0 / 1024 / 1024));
+        
+        LogPrintf("O Blockchain databases initialized successfully\n");
+    } catch (const std::exception& e) {
+        return InitError(strprintf(_("Error initializing O Blockchain databases: %s"), e.what()));
+    }
 
     // ********************************************************* Step 9: load wallet
     for (const auto& client : node.chain_clients) {

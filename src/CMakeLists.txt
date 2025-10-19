@@ -108,6 +108,8 @@ add_library(bitcoin_consensus STATIC EXCLUDE_FROM_ALL
   arith_uint256.cpp
   consensus/merkle.cpp
   consensus/o_pow_pob.cpp
+  consensus/o_business_db.cpp
+  consensus/o_brightid_db.cpp
   consensus/stabilization_mining.cpp
   consensus/stabilization_helpers.cpp
   consensus/currency_exchange.cpp
@@ -119,7 +121,7 @@ add_library(bitcoin_consensus STATIC EXCLUDE_FROM_ALL
   consensus/exchange_rate_initialization.cpp
   consensus/measurement_readiness.cpp
   consensus/geographic_access_control.cpp
-  # consensus/brightid_integration.cpp  # Temporarily disabled due to compilation issues
+  consensus/brightid_integration.cpp
   consensus/tx_check.cpp
   consensus/user_consensus.cpp
   hash.cpp
@@ -178,6 +180,7 @@ add_library(bitcoin_common STATIC EXCLUDE_FROM_ALL
   measurement/measurement_helpers.cpp
   measurement/measurement_policy.cpp
   measurement/volume_conversion.cpp
+  measurement/o_measurement_db.cpp
   merkleblock.cpp
   net_permissions.cpp
   net_types.cpp

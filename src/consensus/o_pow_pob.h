@@ -29,12 +29,14 @@ static constexpr double DIFFICULTY_REDUCTION_FACTOR = 0.5;     // Max 50% reduct
 static constexpr double MAX_BUSINESS_RATIO = 0.8;              // Cap at 80% business miners
 static constexpr double BUSINESS_DIFFICULTY_BONUS = 0.1;       // 10% easier for qualified businesses
 
-/** Block Rate Scaling - Fast Transactional Currency */
-static constexpr int64_t TARGET_BLOCK_TIME = 12;               // 12 seconds (Ethereum-like for transactions)
-static constexpr int BLOCKS_PER_HOUR = 300;                    // 300 blocks per hour (12-second blocks)
-static constexpr int BLOCKS_PER_DAY = 7200;                    // 7,200 blocks per day
-static constexpr int64_t TARGET_BLOCK_TIME_MIN = 12;           // 12 seconds minimum (fixed)
-static constexpr int64_t TARGET_BLOCK_TIME_MAX = 12;           // 12 seconds maximum (fixed)
+/** Block Rate Scaling - Dynamic Based on Business Participation */
+static constexpr int64_t TARGET_BLOCK_TIME_BASE = 12;          // 12 seconds base (Ethereum-like)
+static constexpr int64_t TARGET_BLOCK_TIME_MIN = 6;            // 6 seconds minimum (high business activity)
+static constexpr int64_t TARGET_BLOCK_TIME_MAX = 12;           // 12 seconds maximum (low business activity)
+static constexpr int BLOCKS_PER_HOUR_MIN = 300;                // At 12-second blocks
+static constexpr int BLOCKS_PER_HOUR_MAX = 600;                // At 6-second blocks
+static constexpr int BLOCKS_PER_DAY_MIN = 7200;                // At 12-second blocks
+static constexpr int BLOCKS_PER_DAY_MAX = 14400;               // At 6-second blocks
 
 /** Business Miner Statistics */
 struct BusinessMinerStats {
@@ -82,7 +84,9 @@ public:
     /** Ensure business miners don't mine their own transactions */
     bool ValidateBusinessMinerBlock(const CBlock& block, const uint256& miner_pubkey) const;
     
-    /** Get target block time based on business participation */
+    /** Get target block time based on business participation 
+     *  Dynamic scaling: More businesses = more transactions = faster blocks
+     *  Range: 6-12 seconds (2x throughput scaling) */
     int64_t GetTargetBlockTime(int height) const;
     
     /** Get business miner statistics */
@@ -104,8 +108,8 @@ public:
     static uint256 ExtractMinerPubKey(const CBlock& block);
 
 private:
-    std::map<uint256, BusinessMinerStats> m_business_miners;
-    mutable std::map<int, double> m_cached_business_ratios;  // Cache ratios by height
+    // RAM storage removed - now using persistent database (o_business_db.h)
+    // Access business miner data via g_business_db global instance
     
     /** Calculate transaction statistics for a miner in the qualification period */
     BusinessMinerStats CalculateMinerStats(const uint256& pubkey_hash, int height) const;
