@@ -69,6 +69,20 @@ temp/
 O_WEBSITE_REDESIGN_PROPOSAL.md
 o_website_prototype.html
 
+# Internal documentation (goes in wiki, not code repo)
+/*_COMPLETE.md
+/*_SUMMARY.md
+/*_RESULTS.md
+/*_PLAN.md
+/*_STRATEGY.md
+/*_AUDIT.md
+/HACKER*.md
+/PROMOTION*.md
+/DATABASE*.md
+/TESTING*.md
+/TEST*.md
+/MEASUREMENT*.md
+
 # Simulation runtime files
 simulation/data/
 simulation/logs/
