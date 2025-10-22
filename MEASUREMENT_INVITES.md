@@ -286,17 +286,40 @@ int invite_count =
 
 ---
 
-## Future Enhancements
+## Implementation Phases
 
-### **Phase 1: Current (Pull-Based)** ✅
-- Users check `getmyinvites` periodically
+### **Phase 1: Pull-Based Delivery** ✅ COMPLETE
+- RPC command: `getmyinvites`
+- Users check periodically
 - Wallet UI polls for updates
 - Simple, works today
 
-### **Phase 2: Push Notifications** (Future)
-- P2P network `INVITE` message type
-- Real-time notification to connected peers
-- Lower latency
+### **Phase 2: Push Notifications (P2P)** ✅ COMPLETE
+- **New P2P message types**: `MEASUREINV`, `GETMEASUREINV`
+- **Real-time broadcast** to connected peers
+- **Automatic notification** when invites created
+- **Lower latency** - no polling needed
+
+**How P2P Push Works**:
+1. System creates invites → `BroadcastInvites()` called
+2. `MEASUREINV` message broadcast to all connected peers
+3. Peers receive and store invites in database
+4. Wallet UI notified immediately (no polling delay)
+5. User sees notification instantly
+
+**P2P Message Format**:
+```cpp
+// Announcement message
+class CMeasureInv {
+    std::vector<MeasurementInvite> vInvites;
+};
+
+// Request message
+class CGetMeasureInv {
+    CPubKey user_pubkey;
+    uint64_t nonce;
+};
+```
 
 ### **Phase 3: Incentive Optimization** (Future)
 - Dynamic fees based on urgency
