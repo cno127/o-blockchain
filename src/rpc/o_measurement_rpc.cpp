@@ -14,8 +14,11 @@
 #include <pubkey.h>
 #include <key_io.h>
 #include <random.h>
+#include <wallet/wallet.h>
+#include <wallet/rpc/wallet.h>
 
 using namespace OMeasurement;
+using namespace wallet;
 using node::NodeContext;
 
 static RPCHelpMan submitwaterprice()
@@ -1601,6 +1604,138 @@ static RPCHelpMan recalculatecurrencystability()
     };
 }
 
+static RPCHelpMan getmyinvites()
+{
+    return RPCHelpMan{
+        "getmyinvites",
+        "\nGet all pending measurement invitations for the current wallet.\n"
+        "Returns active (non-expired, non-used) invitations that you can fulfill.\n",
+        {
+            {"address", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "Specific address to check (optional, uses wallet default if omitted)"},
+        },
+        RPCResult{
+            RPCResult::Type::ARR, "", "Array of pending invitations",
+            {
+                {RPCResult::Type::OBJ, "", "",
+                {
+                    {RPCResult::Type::STR, "invite_id", "Unique invitation ID"},
+                    {RPCResult::Type::STR, "type", "Measurement type (water/exchange/validation)"},
+                    {RPCResult::Type::STR, "currency", "Currency code (if applicable)"},
+                    {RPCResult::Type::NUM, "created_at", "Creation timestamp"},
+                    {RPCResult::Type::NUM, "expires_at", "Expiration timestamp"},
+                    {RPCResult::Type::NUM, "time_remaining", "Seconds until expiration"},
+                    {RPCResult::Type::STR, "status", "Invitation status"},
+                }},
+            }
+        },
+        RPCExamples{
+            HelpExampleCli("getmyinvites", "")
+            + HelpExampleRpc("getmyinvites", "")
+        },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+        {
+            // Get the wallet
+            std::shared_ptr<CWallet> const pwallet = GetWalletForJSONRPCRequest(request);
+            if (!pwallet) {
+                throw JSONRPCError(RPC_WALLET_ERROR, "Wallet not found");
+            }
+
+            LOCK(pwallet->cs_wallet);
+
+            // Get user's public key
+            CPubKey user_pubkey;
+            if (request.params.size() > 0 && !request.params[0].isNull()) {
+                // Use specified address
+                CTxDestination dest = DecodeDestination(request.params[0].get_str());
+                if (!IsValidDestination(dest)) {
+                    throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid address");
+                }
+                
+                const PKHash* key_id = std::get_if<PKHash>(&dest);
+                if (!key_id) {
+                    throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Address does not refer to a key");
+                }
+                
+                if (!pwallet->GetPubKey(ToKeyID(*key_id), user_pubkey)) {
+                    throw JSONRPCError(RPC_WALLET_ERROR, "Public key not found in wallet");
+                }
+            } else {
+                // Use wallet's default address
+                if (pwallet->GetKeyPoolSize() == 0) {
+                    throw JSONRPCError(RPC_WALLET_KEYPOOL_RAN_OUT, "Keypool ran out");
+                }
+                
+                CTxDestination dest;
+                std::string error;
+                if (!pwallet->GetNewDestination(OutputType::LEGACY, "", dest, error)) {
+                    throw JSONRPCError(RPC_WALLET_ERROR, "Failed to get destination: " + error);
+                }
+                
+                const PKHash* key_id = std::get_if<PKHash>(&dest);
+                if (!key_id || !pwallet->GetPubKey(ToKeyID(*key_id), user_pubkey)) {
+                    throw JSONRPCError(RPC_WALLET_ERROR, "Failed to get public key");
+                }
+            }
+
+            // Get invites from database
+            if (!OMeasurement::g_measurement_db) {
+                throw JSONRPCError(RPC_INTERNAL_ERROR, "Measurement database not initialized");
+            }
+
+            std::vector<MeasurementInvite> user_invites = 
+                OMeasurement::g_measurement_db->GetUserInvites(user_pubkey);
+
+            int64_t current_time = GetTime();
+            UniValue result(UniValue::VARR);
+            int active_count = 0;
+
+            for (const auto& invite : user_invites) {
+                // Only show active invites (not used, not expired)
+                if (invite.is_used || invite.is_expired || invite.expires_at < current_time) {
+                    continue;
+                }
+
+                UniValue inv(UniValue::VOBJ);
+                inv.pushKV("invite_id", invite.invite_id.GetHex());
+                
+                // Type
+                std::string type_str;
+                switch (invite.type) {
+                    case MeasurementType::WATER_PRICE:
+                        type_str = "water";
+                        break;
+                    case MeasurementType::EXCHANGE_RATE:
+                        type_str = "exchange";
+                        break;
+                    case MeasurementType::WATER_PRICE_OFFLINE_VALIDATION:
+                        type_str = "validation";
+                        break;
+                    default:
+                        type_str = "unknown";
+                }
+                inv.pushKV("type", type_str);
+                
+                if (!invite.currency_code.empty()) {
+                    inv.pushKV("currency", invite.currency_code);
+                }
+                
+                inv.pushKV("created_at", invite.created_at);
+                inv.pushKV("expires_at", invite.expires_at);
+                inv.pushKV("time_remaining", invite.expires_at - current_time);
+                inv.pushKV("status", "active");
+                
+                result.push_back(inv);
+                active_count++;
+            }
+
+            LogPrintf("O Measurement RPC: User %s has %d active invitations (out of %d total)\n",
+                      user_pubkey.GetID().GetHex().c_str(), active_count, user_invites.size());
+
+            return result;
+        },
+    };
+}
+
 void RegisterOMeasurementRPCCommands(CRPCTable& t)
 {
     static const CRPCCommand commands[] = {
@@ -1609,6 +1744,7 @@ void RegisterOMeasurementRPCCommands(CRPCTable& t)
         {"measurement", &getaveragewaterprice},
         {"measurement", &submitexchangerate},
         {"measurement", &createinvites},
+        {"measurement", &getmyinvites},
         {"measurement", &checkmeasurementreadiness},
         {"measurement", &getmeasurementstatistics},
         {"measurement", &submiturl},
