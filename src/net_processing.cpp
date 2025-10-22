@@ -44,6 +44,8 @@
 #include <primitives/block.h>
 #include <primitives/transaction.h>
 #include <protocol.h>
+#include <o_protocol_messages.h>
+#include <measurement/o_measurement_db.h>
 #include <random.h>
 #include <scheduler.h>
 #include <script/script.h>
@@ -4948,6 +4950,62 @@ void PeerManagerImpl::ProcessMessage(CNode& pfrom, const std::string& msg_type, 
         }
         LOCK(m_tx_download_mutex);
         m_txdownloadman.ReceivedNotFound(pfrom.GetId(), tx_invs);
+        return;
+    }
+
+    // O Blockchain: Measurement invitation announcement
+    if (msg_type == NetMsgType::MEASUREINV) {
+        CMeasureInv measureinv;
+        vRecv >> measureinv;
+
+        LogDebug(BCLog::NET, "received measureinv (%d invites) peer=%d\n", measureinv.vInvites.size(), pfrom.GetId());
+
+        // Forward to measurement database for storage
+        if (OMeasurement::g_measurement_db) {
+            std::vector<std::pair<uint256, OMeasurement::MeasurementInvite>> batch;
+            for (const auto& invite : measureinv.vInvites) {
+                batch.emplace_back(invite.invite_id, invite);
+            }
+            if (OMeasurement::g_measurement_db->BatchWriteInvites(batch)) {
+                LogDebug(BCLog::NET, "O Blockchain: Stored %d measurement invitations from peer=%d\n",
+                         batch.size(), pfrom.GetId());
+            }
+        }
+
+        // TODO: Add relay logic to forward to other peers (optional, similar to transaction relay)
+        return;
+    }
+
+    // O Blockchain: Request for measurement invitations
+    if (msg_type == NetMsgType::GETMEASUREINV) {
+        CGetMeasureInv getmeasureinv;
+        vRecv >> getmeasureinv;
+
+        LogDebug(BCLog::NET, "received getmeasureinv for user %s from peer=%d\n",
+                 getmeasureinv.user_pubkey.GetID().GetHex().c_str(), pfrom.GetId());
+
+        // Get invites for the requested user
+        if (OMeasurement::g_measurement_db) {
+            std::vector<OMeasurement::MeasurementInvite> user_invites =
+                OMeasurement::g_measurement_db->GetUserInvites(getmeasureinv.user_pubkey);
+
+            // Filter to only active invites
+            std::vector<OMeasurement::MeasurementInvite> active_invites;
+            int64_t current_time = GetTime();
+            for (const auto& invite : user_invites) {
+                if (!invite.is_used && !invite.is_expired && invite.expires_at > current_time) {
+                    active_invites.push_back(invite);
+                }
+            }
+
+            // Send response if we have any active invites
+            if (!active_invites.empty()) {
+                CMeasureInv measureinv(active_invites);
+                MakeAndPushMessage(pfrom, NetMsgType::MEASUREINV, measureinv);
+                LogDebug(BCLog::NET, "O Blockchain: Sent %d active invitations to peer=%d\n",
+                         active_invites.size(), pfrom.GetId());
+            }
+        }
         return;
     }
 

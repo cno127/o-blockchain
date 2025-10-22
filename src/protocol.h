@@ -264,6 +264,19 @@ inline constexpr const char* WTXIDRELAY{"wtxidrelay"};
  * txreconciliation, as described by BIP 330.
  */
 inline constexpr const char* SENDTXRCNCL{"sendtxrcncl"};
+
+/**
+ * O Blockchain: The measureinv message announces measurement invitations
+ * to peers. Allows real-time push notifications for water price and
+ * exchange rate measurement requests.
+ */
+inline constexpr const char* MEASUREINV{"measureinv"};
+
+/**
+ * O Blockchain: The getmeasureinv message requests pending measurement
+ * invitations for a specific user (by public key hash).
+ */
+inline constexpr const char* GETMEASUREINV{"getmeasureinv"};
 }; // namespace NetMsgType
 
 /** All known message types (see above). Keep this in the same order as the list of messages above. */
@@ -303,6 +316,8 @@ inline const std::array ALL_NET_MESSAGE_TYPES{std::to_array<std::string>({
     NetMsgType::CFCHECKPT,
     NetMsgType::WTXIDRELAY,
     NetMsgType::SENDTXRCNCL,
+    NetMsgType::MEASUREINV,
+    NetMsgType::GETMEASUREINV,
 })};
 
 /** nServices flags */

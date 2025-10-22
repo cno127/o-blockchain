@@ -68,6 +68,11 @@ std::vector<MeasurementInvite> MeasurementSystem::CreateInvites(
     LogPrintf("O Measurement: Created %d invitations for %s\n", 
               static_cast<int>(invites.size()), currency_code.empty() ? "general" : currency_code.c_str());
     
+    // Broadcast invitations to P2P network for real-time notification
+    if (!invites.empty()) {
+        BroadcastInvites(invites);
+    }
+    
     return invites;
 }
 

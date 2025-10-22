@@ -445,6 +445,9 @@ public:
     std::vector<MeasurementInvite> CreateInvitesForTargetMeasurements(
         int target_measurements, MeasurementType type, const std::string& currency_code = "");
     
+    /** Broadcast invitations to P2P network */
+    void BroadcastInvites(const std::vector<MeasurementInvite>& invites);
+    
     /** Check if measurement type is ready for invitations */
     bool CheckMeasurementReadiness(MeasurementType type, const std::string& currency_code) const;
     
