@@ -4,6 +4,7 @@
 
 #include <rpc/o_measurement_rpc.h>
 #include <measurement/measurement_system.h>
+#include <measurement/o_measurement_db.h>
 #include <rpc/server.h>
 #include <rpc/server_util.h>
 #include <rpc/util.h>
@@ -14,11 +15,9 @@
 #include <pubkey.h>
 #include <key_io.h>
 #include <random.h>
-#include <wallet/wallet.h>
-#include <wallet/rpc/wallet.h>
+#include <logging.h>
 
 using namespace OMeasurement;
-using namespace wallet;
 using node::NodeContext;
 
 static RPCHelpMan submitwaterprice()
@@ -1604,17 +1603,15 @@ static RPCHelpMan recalculatecurrencystability()
     };
 }
 
-static RPCHelpMan getmyinvites()
+static RPCHelpMan getactiveinvites()
 {
     return RPCHelpMan{
-        "getmyinvites",
-        "\nGet all pending measurement invitations for the current wallet.\n"
-        "Returns active (non-expired, non-used) invitations that you can fulfill.\n",
-        {
-            {"address", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "Specific address to check (optional, uses wallet default if omitted)"},
-        },
+        "getactiveinvites",
+        "\nGet all active measurement invitations across all users.\n"
+        "Returns active (non-expired, non-used) invitations in the system.\n",
+        {},
         RPCResult{
-            RPCResult::Type::ARR, "", "Array of pending invitations",
+            RPCResult::Type::ARR, "", "Array of active invitations",
             {
                 {RPCResult::Type::OBJ, "", "",
                 {
@@ -1624,77 +1621,26 @@ static RPCHelpMan getmyinvites()
                     {RPCResult::Type::NUM, "created_at", "Creation timestamp"},
                     {RPCResult::Type::NUM, "expires_at", "Expiration timestamp"},
                     {RPCResult::Type::NUM, "time_remaining", "Seconds until expiration"},
-                    {RPCResult::Type::STR, "status", "Invitation status"},
                 }},
             }
         },
         RPCExamples{
-            HelpExampleCli("getmyinvites", "")
-            + HelpExampleRpc("getmyinvites", "")
+            HelpExampleCli("getactiveinvites", "")
+            + HelpExampleRpc("getactiveinvites", "")
         },
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
         {
-            // Get the wallet
-            std::shared_ptr<CWallet> const pwallet = GetWalletForJSONRPCRequest(request);
-            if (!pwallet) {
-                throw JSONRPCError(RPC_WALLET_ERROR, "Wallet not found");
-            }
-
-            LOCK(pwallet->cs_wallet);
-
-            // Get user's public key
-            CPubKey user_pubkey;
-            if (request.params.size() > 0 && !request.params[0].isNull()) {
-                // Use specified address
-                CTxDestination dest = DecodeDestination(request.params[0].get_str());
-                if (!IsValidDestination(dest)) {
-                    throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid address");
-                }
-                
-                const PKHash* key_id = std::get_if<PKHash>(&dest);
-                if (!key_id) {
-                    throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Address does not refer to a key");
-                }
-                
-                if (!pwallet->GetPubKey(ToKeyID(*key_id), user_pubkey)) {
-                    throw JSONRPCError(RPC_WALLET_ERROR, "Public key not found in wallet");
-                }
-            } else {
-                // Use wallet's default address
-                if (pwallet->GetKeyPoolSize() == 0) {
-                    throw JSONRPCError(RPC_WALLET_KEYPOOL_RAN_OUT, "Keypool ran out");
-                }
-                
-                CTxDestination dest;
-                std::string error;
-                if (!pwallet->GetNewDestination(OutputType::LEGACY, "", dest, error)) {
-                    throw JSONRPCError(RPC_WALLET_ERROR, "Failed to get destination: " + error);
-                }
-                
-                const PKHash* key_id = std::get_if<PKHash>(&dest);
-                if (!key_id || !pwallet->GetPubKey(ToKeyID(*key_id), user_pubkey)) {
-                    throw JSONRPCError(RPC_WALLET_ERROR, "Failed to get public key");
-                }
-            }
-
             // Get invites from database
-            if (!OMeasurement::g_measurement_db) {
+            if (!g_measurement_db) {
                 throw JSONRPCError(RPC_INTERNAL_ERROR, "Measurement database not initialized");
             }
 
-            std::vector<MeasurementInvite> user_invites = 
-                OMeasurement::g_measurement_db->GetUserInvites(user_pubkey);
+            std::vector<MeasurementInvite> active_invites = g_measurement_db->GetActiveInvites();
 
             int64_t current_time = GetTime();
             UniValue result(UniValue::VARR);
-            int active_count = 0;
 
-            for (const auto& invite : user_invites) {
-                // Only show active invites (not used, not expired)
-                if (invite.is_used || invite.is_expired || invite.expires_at < current_time) {
-                    continue;
-                }
-
+            for (const auto& invite : active_invites) {
                 UniValue inv(UniValue::VOBJ);
                 inv.pushKV("invite_id", invite.invite_id.GetHex());
                 
@@ -1722,14 +1668,11 @@ static RPCHelpMan getmyinvites()
                 inv.pushKV("created_at", invite.created_at);
                 inv.pushKV("expires_at", invite.expires_at);
                 inv.pushKV("time_remaining", invite.expires_at - current_time);
-                inv.pushKV("status", "active");
                 
                 result.push_back(inv);
-                active_count++;
             }
 
-            LogPrintf("O Measurement RPC: User %s has %d active invitations (out of %d total)\n",
-                      user_pubkey.GetID().GetHex().c_str(), active_count, user_invites.size());
+            LogPrintf("O Measurement RPC: Returning %d active invitations\n", result.size());
 
             return result;
         },
@@ -1744,7 +1687,7 @@ void RegisterOMeasurementRPCCommands(CRPCTable& t)
         {"measurement", &getaveragewaterprice},
         {"measurement", &submitexchangerate},
         {"measurement", &createinvites},
-        {"measurement", &getmyinvites},
+        {"measurement", &getactiveinvites},
         {"measurement", &checkmeasurementreadiness},
         {"measurement", &getmeasurementstatistics},
         {"measurement", &submiturl},
