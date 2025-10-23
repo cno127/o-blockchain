@@ -165,7 +165,6 @@ All comprehensive documentation is available in our **[GitHub Wiki](https://gith
 
 - **[Adoption Simulation](https://github.com/cno127/o-blockchain/wiki/Blockchain-Simulation)** - Mathematical modeling
 - **[Developer Strategy](https://github.com/cno127/o-blockchain/wiki/Developer-Strategy)** - Growing the ecosystem
-- **[Implementation Status](https://github.com/cno127/o-blockchain/wiki/Implementation-Status)** - Current progress
 
 ## 🎯 Use Cases
 
