@@ -151,9 +151,8 @@ All comprehensive documentation is available in our **[GitHub Wiki](https://gith
 
 ### 🌍 Coverage & Scale
 
-- **[Currency Registry](https://github.com/cno127/o-blockchain/wiki/Currency-Registry)** - All 142 currencies
-- **[Country Mapping](https://github.com/cno127/o-blockchain/wiki/Country-Mapping)** - Global coverage details
-- **[Scalability Analysis](https://github.com/cno127/o-blockchain/wiki/Scalability-Overview)** - 8 billion users plan
+- **[Currency Coverage](https://github.com/cno127/o-blockchain/wiki/Currency-Coverage)** - All 142 currencies
+- **[Scalability Overview](https://github.com/cno127/o-blockchain/wiki/Scalability-Overview)** - 8 billion users plan
 
 ### 🔧 Developer Resources
 
@@ -161,10 +160,6 @@ All comprehensive documentation is available in our **[GitHub Wiki](https://gith
 - **[RPC Commands](https://github.com/cno127/o-blockchain/wiki/RPC-Commands)** - API reference
 - **[Currency Exchange](https://github.com/cno127/o-blockchain/wiki/Currency-Exchange)** - Trading O currencies
 
-### 📊 Research & Analysis
-
-- **[Adoption Simulation](https://github.com/cno127/o-blockchain/wiki/Blockchain-Simulation)** - Mathematical modeling
-- **[Developer Strategy](https://github.com/cno127/o-blockchain/wiki/Developer-Strategy)** - Growing the ecosystem
 
 ## 🎯 Use Cases
 
