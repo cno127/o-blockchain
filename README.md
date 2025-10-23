@@ -137,7 +137,6 @@ All comprehensive documentation is available in our **[GitHub Wiki](https://gith
 
 ### 🎯 Essential Reading
 
-- **[Quick Start Guide](https://github.com/cno127/o-blockchain/wiki/Quick-Start-Guide)** - Get up and running in 5 minutes
 - **[Architecture Overview](https://github.com/cno127/o-blockchain/wiki/Architecture-Overview)** - How O Blockchain works
 - **[Database Architecture](https://github.com/cno127/o-blockchain/wiki/Database-Architecture)** ✅ **NEW** - Persistent storage for billions of users
 - **[Currency Coverage](https://github.com/cno127/o-blockchain/wiki/Currency-Coverage)** - 142 global currencies explained
@@ -244,9 +243,9 @@ git push origin feature/your-feature-name
 Join our growing community:
 
 - **📚 Wiki**: [Documentation](https://github.com/cno127/o-blockchain/wiki)
-- **💬 Discord**: discord.gg/oblockchain
-- **✈️ Telegram**: t.me/oblockchain
-- **🐦 Twitter/X**: [@OBlockchain](https://twitter.com/OBlockchain)
+- **💬 Discord**: discord.gg/oblockchain (Coming Soon)
+- **✈️ Telegram**: t.me/oblockchain (Coming Soon)
+- **🐦 Twitter/X**: [@OBlockchain](https://twitter.com/OBlockchain) (Coming Soon)
 - **🐙 GitHub**: [Issues](https://github.com/cno127/o-blockchain/issues) & [Discussions](https://github.com/cno127/o-blockchain/discussions)
 
 ## 📊 Key Statistics
@@ -322,7 +321,7 @@ Ready to join the revolution?
 2. **Build**: Follow [Installation Guide](INSTALL.md)
 3. **Test**: Use [Testing Guide](https://github.com/cno127/o-blockchain/wiki/Testing-Guide)
 4. **Contribute**: See [Contributing Guidelines](CONTRIBUTING.md)
-5. **Connect**: Join [Discord](https://discord.gg/oblockchain)
+5. **Connect**: Join [Discord](https://discord.gg/oblockchain) (Coming Soon)
 
 ---
 
