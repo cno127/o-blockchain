@@ -244,6 +244,8 @@ Join our growing community:
 
 - **📚 Wiki**: [Documentation](https://github.com/cno127/o-blockchain/wiki)
 - **🐙 GitHub**: [Issues](https://github.com/cno127/o-blockchain/issues) & [Discussions](https://github.com/cno127/o-blockchain/discussions)
+- **💼 LinkedIn**: [O Blockchain](https://www.linkedin.com/company/o-blockchain)
+- **📺 YouTube**: [O Blockchain Channel](https://www.youtube.com/@OBlockchain)
 
 ## 📊 Key Statistics
 
