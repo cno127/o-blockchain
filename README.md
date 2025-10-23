@@ -243,9 +243,6 @@ git push origin feature/your-feature-name
 Join our growing community:
 
 - **📚 Wiki**: [Documentation](https://github.com/cno127/o-blockchain/wiki)
-- **💬 Discord**: discord.gg/oblockchain (Coming Soon)
-- **✈️ Telegram**: t.me/oblockchain (Coming Soon)
-- **🐦 Twitter/X**: [@OBlockchain](https://twitter.com/OBlockchain) (Coming Soon)
 - **🐙 GitHub**: [Issues](https://github.com/cno127/o-blockchain/issues) & [Discussions](https://github.com/cno127/o-blockchain/discussions)
 
 ## 📊 Key Statistics
@@ -321,7 +318,6 @@ Ready to join the revolution?
 2. **Build**: Follow [Installation Guide](INSTALL.md)
 3. **Test**: Use [Testing Guide](https://github.com/cno127/o-blockchain/wiki/Testing-Guide)
 4. **Contribute**: See [Contributing Guidelines](CONTRIBUTING.md)
-5. **Connect**: Join [Discord](https://discord.gg/oblockchain) (Coming Soon)
 
 ---
 
