@@ -103,31 +103,60 @@ See [INSTALL.md](INSTALL.md) for detailed build instructions for your platform.
 - **Identity**: BrightID integration
 - **Scalability**: Layer 1 optimizations + Layer 2 plans
 
-## 🎉 Recent Major Update (October 2025)
+## 🎉 Recent Major Updates
 
-### ✅ Database Architecture - Production Ready!
+### December 2025: Measurement System Fully Operational ✅
 
-O Blockchain now features **complete persistent database infrastructure** that scales to billions of users:
+**Critical fixes completed - O Blockchain measurement system now ready for production testing:**
 
-**Three Specialized Databases:**
-- **BrightID Database** (Proof of Personhood) - Stores 8+ billion users with social graph
-- **Measurement Database** (Water Prices) - Handles millions of measurements with statistical confidence
-- **Business Database** (Proof of Business) - Powers dynamic block time scaling
+**User Participation Enabled:**
+- ✅ **User Submissions Working**: Fixed wallet signing for all measurement transaction types
+- ✅ **Automatic Invitations**: Miners create invitations every 10 blocks for all 142 currencies
+- ✅ **Complete Data Flow**: User submission → Blockchain → Validation → Database → Averages → Stability detection → Rewards
 
-**Key Achievements:**
-- ✅ Scales from millions to **8+ billion users** on disk storage
-- ✅ **Dynamic block time**: 1-10 minutes based on business participation (10x potential throughput!)
-- ✅ **80-95% cache hit rates** with LevelDB-based persistent storage
-- ✅ **<1ms** cached reads, **<10ms** disk reads
+**Systems Now Operational:**
+- ✅ **Average Calculations**: Water prices and exchange rates calculated from blockchain database
+- ✅ **Stability Detection**: Currency stability determined from blockchain measurements  
+- ✅ **Stabilization Mining**: Detects unstable currencies, selects recipients by birth currency, distributes rewards
+- ✅ **Full Currency Coverage**: All 142 currencies monitored (not just 11)
+- ✅ **Recipient Selection**: Users selected by birth currency for stabilization rewards
+
+**Technical Implementation:**
+- ~250 lines added across 4 files
+- 6 new blockchain transaction files
+- Wallet API integration for signing
+- Database query optimization
+- Birth currency indexing for reward distribution
+
+See [December 2025 Update](https://github.com/cno127/o-blockchain/wiki/December-2025-Update) and [Measurement System](https://github.com/cno127/o-blockchain/wiki/Measurement-System) for complete details.
+
+### November 2025: Blockchain Synchronization Complete ✅
+
+**All O-specific data now stored in blockchain with perfect consensus:**
+
+**6 Transaction Types:**
+- USER_VERIFY, WATER_PRICE, EXCHANGE_RATE, BUSINESS_REGISTER, MEASUREMENT_VALIDATION, MEASUREMENT_INVITE
+
+**Key Features:**
+- ✅ Birth currency immutably stored in blockchain (critical for UBI economics)
+- ✅ Perfect consensus across all nodes via blockchain
+- ✅ Measurement invitations via blockchain (spam prevention)
+- ✅ Human validations stored in blockchain (distributed trust)
+- ✅ 3 LevelDB databases provide fast indexed queries
+- ✅ All systems rebuildable from blockchain via `-reindex`
+
+See [Transaction Types](https://github.com/cno127/o-blockchain/wiki/Transaction-Types) and [Architecture Overview](https://github.com/cno127/o-blockchain/wiki/Architecture-Overview).
+
+### October 2025: Database Architecture - Production Ready ✅
+
+**Persistent database infrastructure scales to billions of users:**
+
+- ✅ **8+ billion users** supported on disk storage
+- ✅ **Dynamic block time**: 1-10 minutes (10x potential throughput)
+- ✅ **80-95% cache hit rates**, <1ms cached reads
 - ✅ Thread-safe operations with batch write support
-- ✅ **100% compilation success** - all databases fully integrated
 
-**Technical Details:**
-- Fixed double precision serialization (6 decimal places)
-- Migrated 47 RAM references to database
-- Resolved 50+ compilation errors
-- ~2,600 lines of new database code
-- See [Database Architecture](https://github.com/cno127/o-blockchain/wiki/Database-Architecture) wiki page for full details
+See [Database Architecture](https://github.com/cno127/o-blockchain/wiki/Database-Architecture).
 
 ---
 
@@ -138,9 +167,12 @@ All comprehensive documentation is available in our **[GitHub Wiki](https://gith
 ### 🎯 Essential Reading
 
 - **[Architecture Overview](https://github.com/cno127/o-blockchain/wiki/Architecture-Overview)** - How O Blockchain works
-- **[Database Architecture](https://github.com/cno127/o-blockchain/wiki/Database-Architecture)** ✅ **NEW** - Persistent storage for billions of users
+- **[Measurement System](https://github.com/cno127/o-blockchain/wiki/Measurement-System)** ✅ **UPDATED** - Complete measurement and validation system
+- **[Invitation System](https://github.com/cno127/o-blockchain/wiki/Invitation-System)** ✅ **NEW** - Automatic invitations for 142 currencies
+- **[December 2025 Update](https://github.com/cno127/o-blockchain/wiki/December-2025-Update)** ✅ **NEW** - Latest fixes and improvements
+- **[Transaction Types](https://github.com/cno127/o-blockchain/wiki/Transaction-Types)** - 6 blockchain transaction types
+- **[Database Architecture](https://github.com/cno127/o-blockchain/wiki/Database-Architecture)** - Persistent storage for billions
 - **[Currency Coverage](https://github.com/cno127/o-blockchain/wiki/Currency-Coverage)** - 142 global currencies explained
-- **[Measurement System](https://github.com/cno127/o-blockchain/wiki/Measurement-System-Overview)** - Multi-layer validation system for water price measurements
 - **[Stabilization System](https://github.com/cno127/o-blockchain/wiki/Stabilization-System)** - How stability is maintained
 
 ### 💰 Economic Model
