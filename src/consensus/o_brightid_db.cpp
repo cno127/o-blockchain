@@ -510,6 +510,54 @@ std::vector<std::string> CBrightIDUserDB::FindExpiringUsers(int64_t days_until_e
     return expiring_users;
 }
 
+std::vector<CPubKey> CBrightIDUserDB::FindUsersByBirthCurrency(const std::string& birth_currency) const
+{
+    LOCK(m_db_mutex);
+    
+    std::vector<CPubKey> matching_users;
+    std::unique_ptr<CDBIterator> iterator(m_db->NewIterator());
+    
+    for (iterator->Seek(DB_BRIGHTID_USER); iterator->Valid(); iterator->Next()) {
+        std::pair<uint8_t, std::string> key;
+        if (!iterator->GetKey(key) || key.first != DB_BRIGHTID_USER) {
+            break;
+        }
+        
+        BrightIDUser user;
+        if (iterator->GetValue(user)) {
+            // Birth currency is stored in context_id as "COUNTRY:CURRENCY"
+            // Example: "USA:OUSD", "MEX:OMXN", "FRA:OEUR"
+            size_t colon_pos = user.context_id.find(':');
+            if (colon_pos != std::string::npos) {
+                std::string stored_currency = user.context_id.substr(colon_pos + 1);
+                
+                // Match birth currency and ensure user is verified and active
+                if (stored_currency == birth_currency && 
+                    user.IsVerified() && 
+                    user.is_active) {
+                    
+                    // Get user's O address (public key)
+                    auto o_address = GetOAddress(key.second);
+                    if (o_address.has_value()) {
+                        // Convert hex string to CPubKey
+                        std::vector<unsigned char> pubkey_bytes = ParseHex(o_address.value());
+                        if (pubkey_bytes.size() == 33 || pubkey_bytes.size() == 65) {
+                            CPubKey pubkey(pubkey_bytes.begin(), pubkey_bytes.end());
+                            if (pubkey.IsValid()) {
+                                matching_users.push_back(pubkey);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    LogDebug(BCLog::NET, "O BrightID DB: Found %d users with birth currency %s\n", 
+             matching_users.size(), birth_currency.c_str());
+    return matching_users;
+}
+
 // ===== Statistics =====
 
 size_t CBrightIDUserDB::GetUserCount() const

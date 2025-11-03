@@ -176,6 +176,9 @@ public:
     
     /** Clear all data (for testing) */
     void ClearAllData();
+    
+    /** Get all supported O currencies */
+    std::vector<std::string> GetSupportedCurrencies() const;
 
 private:
     // Storage
@@ -195,7 +198,6 @@ private:
     std::string MakeRateKey(const std::string& from, const std::string& to) const;
     bool IsRateExpired(const std::string& rate_key) const;
     void UpdateStatistics(const CurrencyExchange& exchange);
-    std::vector<std::string> GetSupportedCurrencies() const;
 };
 
 /** Global currency exchange manager instance */

@@ -16,6 +16,9 @@
 #include <consensus/validation.h>
 #include <consensus/stabilization_mining.h>
 #include <consensus/measurement_rewards.h>
+#include <consensus/currency_exchange.h>
+#include <measurement/measurement_system.h>
+#include <primitives/o_transactions.h>
 #include <deploymentstatus.h>
 #include <logging.h>
 #include <node/context.h>
@@ -199,6 +202,89 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock()
     if (!measurement_reward_txs.empty()) {
         LogPrintf("O Mining: Added %d measurement reward transactions to block template at height %d\n",
                   static_cast<int>(measurement_reward_txs.size()), nHeight);
+    }
+    
+    // O Blockchain: Add automatic measurement invitation transactions
+    // Run every 10 blocks to avoid spam
+    if (nHeight % 10 == 0) {
+        std::vector<CMutableTransaction> invitation_txs;
+        
+        try {
+            // Get all supported currencies (142 currencies)
+            std::vector<std::string> o_currencies = g_currency_exchange_manager.GetSupportedCurrencies();
+            
+            // Convert O currency codes (OUSD, OEUR, etc.) to fiat codes (USD, EUR, etc.)
+            std::vector<std::string> fiat_currencies;
+            for (const auto& o_currency : o_currencies) {
+                // Remove 'O' prefix: OUSD -> USD, OEUR -> EUR, etc.
+                if (o_currency.length() > 1 && o_currency[0] == 'O') {
+                    fiat_currencies.push_back(o_currency.substr(1));
+                }
+            }
+            
+            // Create invitations for water price measurements
+            for (const auto& currency : fiat_currencies) {
+                if (OMeasurement::g_measurement_system.NeedsMoreMeasurements(
+                        OMeasurement::MeasurementType::WATER_PRICE, currency)) {
+                    
+                    // Get gap and create invitations
+                    int gap = OMeasurement::g_measurement_system.GetMeasurementGap(
+                        OMeasurement::MeasurementType::WATER_PRICE, currency);
+                    int invite_count = std::min(gap, 10); // Max 10 per block per currency
+                    
+                    if (invite_count > 0) {
+                        // Create invitation objects
+                        std::vector<OMeasurement::MeasurementInvite> invites =
+                            OMeasurement::g_measurement_system.CreateInvites(
+                                invite_count,
+                                OMeasurement::MeasurementType::WATER_PRICE,
+                                currency);
+                        
+                        // Convert to blockchain transactions
+                        for (const auto& invite : invites) {
+                            OTransactions::CMeasurementInviteData tx_data;
+                            tx_data.invite_id = invite.invite_id;
+                            tx_data.invited_user = invite.invited_user;
+                            tx_data.measurement_type = 0x02; // WATER_PRICE
+                            tx_data.currency_code = invite.currency_code;
+                            tx_data.created_at = invite.created_at;
+                            tx_data.expires_at = invite.expires_at;
+                            tx_data.block_height = nHeight;
+                            
+                            // Validate
+                            if (!tx_data.IsValid()) {
+                                continue;
+                            }
+                            
+                            // Create transaction
+                            CMutableTransaction mtx;
+                            mtx.version = CTransaction::CURRENT_VERSION;
+                            
+                            // OP_RETURN output with invitation data
+                            CTxOut opReturnOut;
+                            opReturnOut.nValue = 0;
+                            opReturnOut.scriptPubKey = tx_data.ToScript();
+                            mtx.vout.push_back(opReturnOut);
+                            
+                            invitation_txs.push_back(mtx);
+                        }
+                    }
+                }
+            }
+            
+            // Add invitation transactions to block
+            for (const auto& inv_tx : invitation_txs) {
+                pblock->vtx.push_back(MakeTransactionRef(inv_tx));
+                nBlockTx++;
+            }
+            
+            if (!invitation_txs.empty()) {
+                LogPrintf("O Mining: Added %d automatic invitation transactions to block template at height %d\n",
+                         static_cast<int>(invitation_txs.size()), nHeight);
+            }
+        } catch (const std::exception& e) {
+            LogPrintf("O Mining: Error creating invitation transactions: %s\n", e.what());
+        }
     }
 
     LogPrintf("CreateNewBlock(): block weight: %u txs: %u fees: %ld sigops %d\n", GetBlockWeight(*pblock), nBlockTx, nFees, nBlockSigOpsCost);

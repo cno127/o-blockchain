@@ -20,6 +20,7 @@
 #include <consensus/stabilization_mining.h>
 #include <consensus/stabilization_coins.h>
 #include <consensus/stabilization_consensus.h>
+#include <consensus/o_tx_validation.h>
 #include <cuckoocache.h>
 #include <flatfile.h>
 #include <hash.h>
@@ -43,6 +44,7 @@
 #include <pow.h>
 #include <primitives/block.h>
 #include <primitives/transaction.h>
+#include <primitives/o_transactions.h>
 #include <random.h>
 #include <script/script.h>
 #include <script/sigcache.h>
@@ -2708,6 +2710,13 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
              nInputs <= 1 ? 0 : Ticks<MillisecondsDouble>(time_3 - time_2) / (nInputs - 1),
              Ticks<SecondsDouble>(m_chainman.time_connect),
              Ticks<MillisecondsDouble>(m_chainman.time_connect) / m_chainman.num_blocks_total);
+
+    // O Blockchain: Process O-specific transactions (user verifications, measurements)
+    if (!OConsensus::ProcessOTransactions(block, pindex)) {
+        LogPrintf("O Blockchain: Failed to process O transactions at height %d\n", pindex->nHeight);
+        // Note: We don't fail the block for O transaction processing errors (non-critical)
+        // Individual O txs may be invalid, but block can still be accepted
+    }
 
     // O Blockchain: Check for stabilization mining after processing all transactions
     if (OConsensus::ShouldTriggerStabilization(block, pindex->nHeight)) {

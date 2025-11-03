@@ -394,6 +394,47 @@ UniValue getoaddress(const JSONRPCRequest& request)
     return result;
 }
 
+UniValue submituserverification(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size() < 6 || request.params.size() > 8) {
+        throw std::runtime_error(
+            "submituserverification \"user_id\" \"identity_provider\" \"country_code\" \"birth_currency\" \"verification_data\" \"provider_signature\" ( \"expiration\" \"o_pubkey\" )\n"
+            "\nSubmit a user verification transaction to the blockchain.\n"
+            "Supports multiple identity providers: BrightID, KYC systems, WorldCoin, etc.\n"
+            "\nArguments:\n"
+            "1. user_id              (string, required) Unique user ID from identity provider\n"
+            "2. identity_provider    (string, required) Provider: 'brightid', 'kyc_usa', 'kyc_fra', 'worldcoin', etc.\n"
+            "3. country_code         (string, required) ISO 3166-1 alpha-3 country code (USA, FRA, MEX)\n"
+            "4. birth_currency       (string, required) Birth currency for UBI (OUSD, OEUR, OMXN) - IMMUTABLE!\n"
+            "5. verification_data    (string, required) JSON verification data from provider\n"
+            "6. provider_signature   (string, required) Provider's signature (hex)\n"
+            "7. expiration           (numeric, optional) Expiration timestamp (0 = never, default = 1 year)\n"
+            "8. o_pubkey             (string, optional) O Blockchain pubkey (default = wallet's pubkey)\n"
+            "\nResult:\n"
+            "{\n"
+            "  \"txid\": \"hash\",\n"
+            "  \"user_key\": \"provider:userid\",\n"
+            "  \"birth_currency\": \"OUSD\",\n"
+            "  \"country\": \"USA\"\n"
+            "}\n"
+            "\nNOTE: birth_currency determines UBI payments for LIFE and CANNOT be changed!\n"
+            "\nExamples:\n"
+            + HelpExampleCli("submituserverification", "\"0x1a2b3c...\" \"brightid\" \"USA\" \"OUSD\" '{\"score\":95}' \"0xabcd...\"")
+            + HelpExampleRpc("submituserverification", "\"0x1a2b3c...\", \"kyc_fra\", \"FRA\", \"OEUR\", '{\"level\":\"full\"}', \"0x1234...\"")
+        );
+    }
+
+    // TODO: Implement transaction creation and broadcast
+    // For now, return placeholder
+    
+    UniValue result(UniValue::VOBJ);
+    result.pushKV("error", "Not yet implemented - implementation in progress");
+    result.pushKV("status", "RPC command structure ready, transaction builder coming soon");
+    result.pushKV("note", "This will create a USER_VERIFY transaction and broadcast to network");
+    
+    return result;
+}
+
 // ===== RPC Command Registration =====
 
 void RegisterOBrightIDRPCCommands(CRPCTable& t)
@@ -407,6 +448,7 @@ void RegisterOBrightIDRPCCommands(CRPCTable& t)
         // User Verification
         {"brightid", &verifyuser},
         {"brightid", &getuserstatus},
+        {"brightid", &submituserverification},  // NEW: Submit to blockchain
         
         // Privacy-Preserving Features
         {"brightid", &generateanonymousid},

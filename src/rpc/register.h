@@ -32,6 +32,7 @@ void RegisterOMeasurementRewardsRPCCommands(CRPCTable &tableRPC);
 void RegisterOExchangeRateInitRPCCommands(CRPCTable &tableRPC);
 void RegisterOMeasurementReadinessRPCCommands(CRPCTable &tableRPC);
 void RegisterOUserVerificationRPCCommands(CRPCTable &tableRPC);
+void RegisterOBlockchainTxRPCCommands(CRPCTable &tableRPC);
 // void RegisterOCurrencyLifecycleRPCCommands(CRPCTable &tableRPC);  // Temporarily disabled
 // void RegisterOBrightIDRPCCommands(CRPCTable &tableRPC);  // Temporarily disabled
 // void RegisterOBlockchainRPCCommands(CRPCTable &tableRPC);
@@ -61,6 +62,7 @@ static inline void RegisterAllCoreRPCCommands(CRPCTable &t)
            RegisterOExchangeRateInitRPCCommands(t);
            RegisterOMeasurementReadinessRPCCommands(t);
            RegisterOUserVerificationRPCCommands(t);
+           RegisterOBlockchainTxRPCCommands(t);
            // RegisterOCurrencyLifecycleRPCCommands(t);  // Temporarily disabled
            // RegisterOBrightIDRPCCommands(t);  // Temporarily disabled
            // RegisterOBlockchainRPCCommands(t);

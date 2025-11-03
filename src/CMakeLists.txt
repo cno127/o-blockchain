@@ -122,11 +122,13 @@ add_library(bitcoin_consensus STATIC EXCLUDE_FROM_ALL
   consensus/measurement_readiness.cpp
   consensus/geographic_access_control.cpp
   consensus/brightid_integration.cpp
+  consensus/o_tx_validation.cpp
   consensus/tx_check.cpp
   consensus/user_consensus.cpp
   hash.cpp
   primitives/block.cpp
   primitives/transaction.cpp
+  primitives/o_transactions.cpp
   pubkey.cpp
   script/interpreter.cpp
   script/script.cpp
@@ -324,6 +326,7 @@ add_library(bitcoin_node STATIC EXCLUDE_FROM_ALL
   rpc/o_currency_exchange_rpc.cpp
   rpc/o_stabilization_integration_rpc.cpp
   rpc/o_measurement_rewards_rpc.cpp
+  rpc/o_blockchain_tx_rpc.cpp
   rpc/o_exchange_rate_init_rpc.cpp
   rpc/o_measurement_readiness_rpc.cpp
   rpc/o_user_verification_rpc.cpp

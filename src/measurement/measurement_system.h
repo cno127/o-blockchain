@@ -406,42 +406,39 @@ public:
     
     // ===== Water Price Measurements =====
     
-    /** Submit a water price measurement */
-    uint256 SubmitWaterPrice(const WaterPriceMeasurement& measurement);
+    // NOTE: Measurement submission is now done via blockchain transactions.
+    // Use RPC commands: submitwaterpricetx, submitexchangeratetx, submitvalidationtx
+    // Data is automatically extracted from blockchain to CMeasurementDB
     
-    /** Validate a water price measurement */
-    bool ValidateWaterPrice(const uint256& measurement_id, const CPubKey& validator);
-    
-    /** Get a water price measurement */
+    /** Get a water price measurement from database */
     std::optional<WaterPriceMeasurement> GetWaterPriceMeasurement(const uint256& measurement_id) const;
     
-    /** Get all water price measurements for a currency in a time range */
+    /** Get all water price measurements for a currency in a time range from database */
     std::vector<WaterPriceMeasurement> GetWaterPricesInRange(
         const std::string& currency, int64_t start_time, int64_t end_time) const;
     
     // ===== Exchange Rate Measurements =====
     
-    /** Submit an exchange rate measurement */
-    uint256 SubmitExchangeRate(const ExchangeRateMeasurement& measurement);
-    
-    /** Validate an exchange rate measurement */
-    bool ValidateExchangeRate(const uint256& measurement_id, const CPubKey& validator);
-    
-    /** Get an exchange rate measurement */
+    /** Get an exchange rate measurement from database */
     std::optional<ExchangeRateMeasurement> GetExchangeRateMeasurement(const uint256& measurement_id) const;
     
-    /** Get all exchange rate measurements in a time range */
+    /** Get all exchange rate measurements in a time range from database */
     std::vector<ExchangeRateMeasurement> GetExchangeRatesInRange(
         const std::string& from_currency, const std::string& to_currency,
         int64_t start_time, int64_t end_time) const;
     
     // ===== Invitations =====
     
-    /** Create measurement invites for users */
+    // NOTE: Invitations should now be created as blockchain transactions (MEASUREMENT_INVITE)
+    // These legacy functions create invites in RAM only - they should be updated to create
+    // blockchain transactions or removed entirely.
+    // TODO: Update these to create MEASUREMENT_INVITE blockchain transactions
+    
+    /** Create measurement invites for users (DEPRECATED - creates RAM-only invites) */
     std::vector<MeasurementInvite> CreateInvites(
         int count, MeasurementType type, const std::string& currency_code = "");
     
-    /** Create invitations to achieve target measurement count */
+    /** Create invitations to achieve target measurement count (DEPRECATED - creates RAM-only invites) */
     std::vector<MeasurementInvite> CreateInvitesForTargetMeasurements(
         int target_measurements, MeasurementType type, const std::string& currency_code = "");
     
@@ -661,12 +658,14 @@ public:
     void PruneOldData(int64_t cutoff_time);
 
 private:
-    // Storage maps
-    std::map<uint256, WaterPriceMeasurement> m_water_prices;
-    std::map<uint256, ExchangeRateMeasurement> m_exchange_rates;
-    std::map<uint256, MeasurementInvite> m_invites;
-    std::map<uint256, ValidatedURL> m_validated_urls;
+    // NOTE: Measurement data (water prices, exchange rates, invites) is now stored in blockchain
+    // and extracted to CMeasurementDB. See src/measurement/o_measurement_db.h
+    
+    // Cache for daily averages (calculated from blockchain data)
     std::map<std::string, DailyAverage> m_daily_averages;  // Key: currency_date
+    
+    // URLs for bot crawling (still RAM-only for now - TODO: migrate to database)
+    std::map<uint256, ValidatedURL> m_validated_urls;
     
     // Statistics
     struct Statistics {

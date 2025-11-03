@@ -7,6 +7,7 @@
 
 #include <dbwrapper.h>
 #include <consensus/brightid_integration.h>
+#include <pubkey.h>
 #include <sync.h>
 #include <uint256.h>
 
@@ -120,6 +121,9 @@ public:
     
     /** Find users expiring soon */
     std::vector<std::string> FindExpiringUsers(int64_t days_until_expiry) const;
+    
+    /** Find users by birth currency (for stabilization rewards) */
+    std::vector<CPubKey> FindUsersByBirthCurrency(const std::string& birth_currency) const;
     
     // ===== Statistics =====
     

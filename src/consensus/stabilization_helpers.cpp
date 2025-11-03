@@ -5,9 +5,11 @@
 #include <consensus/stabilization_mining.h>
 #include <consensus/currency_lifecycle.h>
 #include <consensus/currency_disappearance_handling.h>
+#include <consensus/o_brightid_db.h>
 #include <measurement/measurement_system.h>
 #include <logging.h>
 #include <random.h>
+#include <util/strencodings.h>
 #include <util/time.h>
 #include <algorithm>
 #include <cmath>
@@ -153,7 +155,20 @@ std::vector<CPubKey> StabilizationMining::SelectRecipientsFromCurrency(
 }
 
 std::vector<CPubKey> StabilizationMining::GetUsersByCurrency(const std::string& currency) const {
-    return std::vector<CPubKey>();
+    // Query BrightID database for users with this birth currency
+    if (!g_brightid_db) {
+        LogPrintf("O Stabilization: BrightID database not initialized\n");
+        return std::vector<CPubKey>();
+    }
+    
+    // Birth currency is stored in context_id as "COUNTRY:CURRENCY"
+    // We need to find users with matching currency (e.g., "OUSD", "OEUR", "OMXN")
+    std::vector<CPubKey> users = g_brightid_db->FindUsersByBirthCurrency(currency);
+    
+    LogPrintf("O Stabilization: Found %d users with birth currency %s for reward selection\n",
+             static_cast<int>(users.size()), currency.c_str());
+    
+    return users;
 }
 
 int StabilizationMining::CalculateOptimalRecipientCount(CAmount total_coins) const {

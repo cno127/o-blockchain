@@ -3,6 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <measurement/measurement_system.h>
+#include <measurement/o_measurement_db.h>
 #include <consensus/user_consensus.h>
 #include <consensus/currency_lifecycle.h>
 #include <consensus/currency_disappearance_handling.h>
@@ -59,19 +60,21 @@ std::vector<MeasurementInvite> MeasurementSystem::CreateInvites(
         invite.is_expired = false;
         invite.block_height = 0;
         
-        m_invites[invite.invite_id] = invite;
+        // TODO: Create MEASUREMENT_INVITE blockchain transaction instead of RAM storage
+        // For now, just add to return list (not persisted)
         invites.push_back(invite);
         
         m_stats.total_invites_sent++;
     }
     
-    LogPrintf("O Measurement: Created %d invitations for %s\n", 
+    LogPrintf("O Measurement: Created %d invitations for %s (NOTE: RAM-only, not persisted to blockchain yet)\n", 
               static_cast<int>(invites.size()), currency_code.empty() ? "general" : currency_code.c_str());
     
-    // Broadcast invitations to P2P network for real-time notification
-    if (!invites.empty()) {
-        BroadcastInvites(invites);
-    }
+    // TODO: Instead of broadcasting to P2P, create blockchain transactions
+    // Blockchain transactions will automatically sync to all nodes
+    // if (!invites.empty()) {
+    //     BroadcastInvites(invites);
+    // }
     
     return invites;
 }
@@ -98,23 +101,34 @@ std::vector<MeasurementInvite> MeasurementSystem::CreateInvitesForTargetMeasurem
 
 bool MeasurementSystem::IsInviteValid(const uint256& invite_id, int64_t current_time) const
 {
-    auto it = m_invites.find(invite_id);
-    if (it == m_invites.end()) {
+    // Read from persistent database instead of RAM
+    if (!g_measurement_db) {
         return false;
     }
     
-    return it->second.IsValid(current_time);
+    auto invite_opt = g_measurement_db->ReadInvite(invite_id);
+    if (!invite_opt.has_value()) {
+        return false;
+    }
+    
+    const auto& invite = invite_opt.value();
+    return invite.IsValid(current_time);
 }
 
 bool MeasurementSystem::IsInviteValidForUser(const uint256& invite_id, const CPubKey& submitter, int64_t current_time) const
 {
-    auto it = m_invites.find(invite_id);
-    if (it == m_invites.end()) {
+    // Read from persistent database instead of RAM
+    if (!g_measurement_db) {
+        return false;
+    }
+    
+    auto invite_opt = g_measurement_db->ReadInvite(invite_id);
+    if (!invite_opt.has_value()) {
         LogPrintf("O Measurement: Invite ID not found: %s\n", invite_id.GetHex().c_str());
         return false;
     }
     
-    const MeasurementInvite& invite = it->second;
+    const auto& invite = invite_opt.value();
     
     // Check if invite is valid (not expired, not used)
     if (!invite.IsValid(current_time)) {
@@ -137,32 +151,43 @@ bool MeasurementSystem::IsInviteValidForUser(const uint256& invite_id, const CPu
 
 bool MeasurementSystem::MarkInviteUsed(const uint256& invite_id)
 {
-    auto it = m_invites.find(invite_id);
-    if (it == m_invites.end()) {
+    // Read from database, mark as used, write back
+    if (!g_measurement_db) {
         return false;
     }
     
-    it->second.is_used = true;
-    return true;
+    auto invite_opt = g_measurement_db->ReadInvite(invite_id);
+    if (!invite_opt.has_value()) {
+        return false;
+    }
+    
+    auto invite = invite_opt.value();
+    invite.is_used = true;
+    return g_measurement_db->WriteInvite(invite_id, invite);
 }
 
 std::optional<MeasurementInvite> MeasurementSystem::GetInvite(const uint256& invite_id) const
 {
-    auto it = m_invites.find(invite_id);
-    if (it == m_invites.end()) {
-        return std::nullopt;
+    // Read from persistent database instead of RAM
+    if (g_measurement_db) {
+        return g_measurement_db->ReadInvite(invite_id);
     }
-    return it->second;
+    return std::nullopt;
 }
 
 std::optional<std::string> MeasurementSystem::GetInviteDetails(const uint256& invite_id) const
 {
-    auto it = m_invites.find(invite_id);
-    if (it == m_invites.end()) {
+    // Read from persistent database instead of RAM
+    if (!g_measurement_db) {
         return std::nullopt;
     }
     
-    const MeasurementInvite& invite = it->second;
+    auto invite_opt = g_measurement_db->ReadInvite(invite_id);
+    if (!invite_opt.has_value()) {
+        return std::nullopt;
+    }
+    
+    const auto& invite = invite_opt.value();
     std::string details = "Invite ID: " + invite_id.GetHex() + 
                          ", Invited User: " + invite.invited_user.GetID().GetHex() +
                          ", Type: " + std::to_string(static_cast<int>(invite.type)) +
@@ -177,18 +202,10 @@ std::optional<std::string> MeasurementSystem::GetInviteDetails(const uint256& in
 
 void MeasurementSystem::ExpireOldInvites(int64_t current_time)
 {
-    int expired_count = 0;
-    
-    for (auto& [id, invite] : m_invites) {
-        if (!invite.is_expired && current_time > invite.expires_at) {
-            invite.is_expired = true;
-            expired_count++;
-        }
-    }
-    
-    if (expired_count > 0) {
-        LogPrintf("O Measurement: Expired %d old invites\n", expired_count);
-    }
+    // TODO: Implement database iteration for expiring invites
+    // Database needs a method like: IterateAllInvites() or GetAllInvites()
+    // For now, invites expire naturally when checked (IsInviteValid checks expiration)
+    LogPrintf("WARNING: ExpireOldInvites not yet implemented for database backend\n");
 }
 
 // ===== Validated URLs =====
@@ -543,16 +560,14 @@ std::map<std::string, int> MeasurementSystem::GetMeasurementTargetStatistics() c
 
 double MeasurementSystem::GetConversionRate(MeasurementType type) const
 {
-    int64_t invites_sent = 0;
+    // TODO: Implement database query to count invites and completed measurements
+    // For now, use statistics counters
+    int64_t invites_sent = m_stats.total_invites_sent;
     int64_t measurements_received = 0;
     
-    for (const auto& [id, invite] : m_invites) {
-        if (invite.type == type) {
-            invites_sent++;
-            if (invite.is_used) {
-                measurements_received++;
-            }
-        }
+    auto it = m_stats.measurements_by_type.find(type);
+    if (it != m_stats.measurements_by_type.end()) {
+        measurements_received = it->second;
     }
     
     if (invites_sent == 0) {
@@ -978,16 +993,22 @@ CAmount MeasurementSystem::CalculateReward(MeasurementType type, double user_rep
 
 size_t MeasurementSystem::GetTotalMeasurementCount() const
 {
-    return m_water_prices.size() + m_exchange_rates.size();
+    // Use statistics counter instead of RAM map size
+    return m_stats.total_measurements_received;
 }
 
 std::map<std::string, int> MeasurementSystem::GetMeasurementStatistics() const
 {
     std::map<std::string, int> stats;
-    stats["total_water_prices"] = m_water_prices.size();
-    stats["total_exchange_rates"] = m_exchange_rates.size();
-    stats["total_invites"] = m_invites.size();
-    stats["total_urls"] = m_validated_urls.size();
+    // TODO: Query database for actual counts
+    // For now, use statistics counters
+    auto water_it = m_stats.measurements_by_type.find(MeasurementType::WATER_PRICE);
+    stats["total_water_prices"] = (water_it != m_stats.measurements_by_type.end()) ? water_it->second : 0;
+    
+    auto exchange_it = m_stats.measurements_by_type.find(MeasurementType::EXCHANGE_RATE);
+    stats["total_exchange_rates"] = (exchange_it != m_stats.measurements_by_type.end()) ? exchange_it->second : 0;
+    
+    stats["total_urls"] = m_validated_urls.size();  // URLs still use RAM for now
     stats["invites_sent"] = m_stats.total_invites_sent;
     stats["measurements_received"] = m_stats.total_measurements_received;
     stats["validations"] = m_stats.total_validations;
@@ -997,26 +1018,19 @@ std::map<std::string, int> MeasurementSystem::GetMeasurementStatistics() const
 
 void MeasurementSystem::PruneOldData(int64_t cutoff_time)
 {
+    // NOTE: Measurement data is now in blockchain (permanent) and CMeasurementDB (persistent)
+    // Pruning should be done at database level if needed
+    // For now, blockchain data is permanent (no pruning)
+    
+    LogPrintf("O Measurement: PruneOldData called with cutoff %lld (blockchain data is permanent)\n", cutoff_time);
+    
+    // Prune daily averages cache if needed
     int pruned = 0;
-    
-    auto water_it = m_water_prices.begin();
-    while (water_it != m_water_prices.end()) {
-        if (water_it->second.timestamp < cutoff_time) {
-            water_it = m_water_prices.erase(water_it);
-            pruned++;
-        } else {
-            ++water_it;
-        }
-    }
-    
-    auto exchange_it = m_exchange_rates.begin();
-    while (exchange_it != m_exchange_rates.end()) {
-        if (exchange_it->second.timestamp < cutoff_time) {
-            exchange_it = m_exchange_rates.erase(exchange_it);
-            pruned++;
-        } else {
-            ++exchange_it;
-        }
+    auto avg_it = m_daily_averages.begin();
+    while (avg_it != m_daily_averages.end()) {
+        // Parse date and check if it's before cutoff
+        // For now, skip pruning daily averages
+        ++avg_it;
     }
     
     if (pruned > 0) {
@@ -1661,8 +1675,10 @@ void MeasurementSystem::ProcessOOnlyCurrencyMeasurement(const std::string& curre
     measurement.is_validated = true; // O_ONLY measurements are auto-validated
     measurement.confidence_score = 1.0; // Full confidence for O_ONLY measurements
     
-    // Add to measurement system
-    m_water_prices[measurement.measurement_id] = measurement;
+    // Store in persistent database
+    if (g_measurement_db) {
+        g_measurement_db->WriteWaterPrice(measurement.measurement_id, measurement);
+    }
     
     // Update O_ONLY stability tracking
     g_currency_disappearance_handler.UpdateOOnlyStability(currency, 
@@ -1988,8 +2004,10 @@ uint256 MeasurementSystem::SubmitMeasurementWithValidation(const WaterPriceMeasu
     WaterPriceMeasurement validated_measurement = measurement;
     validated_measurement.auto_validation = validation;
     
-    // Submit the validated measurement
-    return SubmitWaterPrice(validated_measurement);
+    // TODO: Create blockchain transaction instead of direct submission
+    // For now, return error indicating this function is deprecated
+    LogPrintf("WARNING: SubmitMeasurementWithValidation is deprecated. Use submitwaterpricetx RPC instead.\n");
+    return uint256();
 }
 
 uint256 MeasurementSystem::SubmitMeasurementWithValidation(const ExchangeRateMeasurement& measurement)
@@ -2007,8 +2025,10 @@ uint256 MeasurementSystem::SubmitMeasurementWithValidation(const ExchangeRateMea
     ExchangeRateMeasurement validated_measurement = measurement;
     validated_measurement.auto_validation = validation;
     
-    // Submit the validated measurement
-    return SubmitExchangeRate(validated_measurement);
+    // TODO: Create blockchain transaction instead of direct submission
+    // For now, return error indicating this function is deprecated
+    LogPrintf("WARNING: SubmitMeasurementWithValidation is deprecated. Use submitexchangeratetx RPC instead.\n");
+    return uint256();
 }
 
 // ===== Automatic Invitation Triggers =====
