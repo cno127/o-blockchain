@@ -41,7 +41,7 @@ void MeasurementReadinessManager::UpdateCoinSupply(const std::string& o_currency
               o_currency.c_str(), FormatMoney(total_supply));
 }
 
-bool MeasurementReadinessManager::IsWaterPriceMeasurementReady(const std::string& o_currency) const {
+bool MeasurementReadinessManager::IsWaterPriceMeasurementReady(const std::string& o_currency, int height) const {
     LOCK(cs_readiness);
     
     auto it = m_user_counts.find(o_currency);
@@ -49,7 +49,20 @@ bool MeasurementReadinessManager::IsWaterPriceMeasurementReady(const std::string
         return false;
     }
     
-    return it->second >= MIN_USERS_FOR_WATER_PRICE_MEASUREMENTS;
+    int user_count = it->second;
+    
+    // Bootstrap mode: Lower threshold for early blocks
+    if (height < BOOTSTRAP_HEIGHT_THRESHOLD) {
+        bool ready = user_count >= BOOTSTRAP_MIN_USERS;
+        if (ready && height % 100 == 0) {  // Log periodically
+            LogPrintf("O Measurement Readiness: %s in BOOTSTRAP mode (height %d) - %d users (threshold: %d)\n",
+                     o_currency.c_str(), height, user_count, BOOTSTRAP_MIN_USERS);
+        }
+        return ready;
+    }
+    
+    // Mature mode: Full threshold
+    return user_count >= MIN_USERS_FOR_WATER_PRICE_MEASUREMENTS;
 }
 
 bool MeasurementReadinessManager::IsExchangeRateMeasurementReady(const std::string& o_currency) const {

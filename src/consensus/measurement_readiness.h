@@ -11,7 +11,9 @@
 namespace OConsensus {
 
 // Minimum requirements for starting measurements
-static constexpr int MIN_USERS_FOR_WATER_PRICE_MEASUREMENTS = 100;
+static constexpr int MIN_USERS_FOR_WATER_PRICE_MEASUREMENTS = 100;  // Mature network
+static constexpr int BOOTSTRAP_MIN_USERS = 10;  // Bootstrap mode (early blocks)
+static constexpr int BOOTSTRAP_HEIGHT_THRESHOLD = 10000;  // Switch to full threshold at block 10,000
 static constexpr CAmount MIN_COINS_FOR_EXCHANGE_RATE_MEASUREMENTS = 100000 * COIN; // 100,000 O coins
 
 /**
@@ -56,9 +58,10 @@ public:
     /**
      * @brief Check if water price measurements are ready for an O currency.
      * @param o_currency The O currency code.
-     * @return True if ready (100+ users), false otherwise.
+     * @param height Current block height (for bootstrap mode)
+     * @return True if ready (10+ users in bootstrap, 100+ users after), false otherwise.
      */
-    bool IsWaterPriceMeasurementReady(const std::string& o_currency) const;
+    bool IsWaterPriceMeasurementReady(const std::string& o_currency, int height = 0) const;
     
     /**
      * @brief Check if exchange rate measurements are ready for an O currency.

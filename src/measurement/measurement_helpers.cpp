@@ -23,16 +23,16 @@ namespace OMeasurement {
 // ===== Invitations =====
 
 std::vector<MeasurementInvite> MeasurementSystem::CreateInvites(
-    int count, MeasurementType type, const std::string& currency_code)
+    int count, MeasurementType type, const std::string& currency_code, int height)
 {
     std::vector<MeasurementInvite> invites;
     int64_t current_time = GetTime();
     int64_t expiration_time = current_time + (Config::INVITE_EXPIRATION_DAYS * 24 * 3600);
     
-    // Check measurement readiness before creating invitations
-    if (!CheckMeasurementReadiness(type, currency_code)) {
-        LogPrintf("O Measurement: Cannot create invitations - readiness conditions not met for %s measurements in %s\n",
-                  GetMeasurementTypeString(type).c_str(), currency_code.empty() ? "general" : currency_code.c_str());
+    // Check measurement readiness before creating invitations (pass height for bootstrap mode)
+    if (!CheckMeasurementReadiness(type, currency_code, height)) {
+        LogPrintf("O Measurement: Cannot create invitations - readiness conditions not met for %s measurements in %s at height %d\n",
+                  GetMeasurementTypeString(type).c_str(), currency_code.empty() ? "general" : currency_code.c_str(), height);
         return invites; // Return empty vector if not ready
     }
     
@@ -1542,7 +1542,7 @@ int MeasurementSystem::CalculateInviteCountForTarget(int target_measurements, co
     return invite_count;
 }
 
-bool MeasurementSystem::CheckMeasurementReadiness(MeasurementType type, const std::string& currency_code) const {
+bool MeasurementSystem::CheckMeasurementReadiness(MeasurementType type, const std::string& currency_code, int height) const {
     using namespace OConsensus;
     
     // For water price measurements, check if we have enough users
@@ -1551,20 +1551,20 @@ bool MeasurementSystem::CheckMeasurementReadiness(MeasurementType type, const st
         type == MeasurementType::ONLINE_WATER_PRICE_VALIDATION) {
         
         if (!currency_code.empty()) {
-            // Check specific currency readiness
+            // Check specific currency readiness (pass height for bootstrap mode)
             std::string o_currency = GetOCurrencyFromFiat(currency_code);
             if (!o_currency.empty()) {
-                bool ready = g_measurement_readiness_manager.IsWaterPriceMeasurementReady(o_currency);
-                LogPrintf("O Measurement: Water price readiness for %s (%s): %s\n", 
-                          currency_code.c_str(), o_currency.c_str(), ready ? "READY" : "NOT READY");
+                bool ready = g_measurement_readiness_manager.IsWaterPriceMeasurementReady(o_currency, height);
+                LogPrintf("O Measurement: Water price readiness for %s (%s) at height %d: %s\n", 
+                          currency_code.c_str(), o_currency.c_str(), height, ready ? "READY" : "NOT READY");
                 return ready;
             }
         } else {
             // For general water price measurements, check if any currency is ready
             auto ready_currencies = g_measurement_readiness_manager.GetReadyForWaterPriceMeasurements();
             bool ready = !ready_currencies.empty();
-            LogPrintf("O Measurement: General water price readiness: %s (%d currencies ready)\n", 
-                      ready ? "READY" : "NOT READY", static_cast<int>(ready_currencies.size()));
+            LogPrintf("O Measurement: General water price readiness at height %d: %s (%d currencies ready)\n", 
+                      height, ready ? "READY" : "NOT READY", static_cast<int>(ready_currencies.size()));
             return ready;
         }
     }

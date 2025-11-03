@@ -11,9 +11,12 @@
 #include <consensus/params.h>
 #include <hash.h>
 #include <kernel/messagestartchars.h>
+#include <key.h>
 #include <logging.h>
 #include <primitives/block.h>
+#include <primitives/o_transactions.h>
 #include <primitives/transaction.h>
+#include <pubkey.h>
 #include <script/interpreter.h>
 #include <script/script.h>
 #include <uint256.h>
@@ -37,6 +40,88 @@ auto consteval_ctor(auto&& input) { return input; }
 #define consteval_ctor(input) (input)
 #endif
 
+/**
+ * Generate deterministic genesis key for seed users
+ * Uses a deterministic seed so all nodes generate identical genesis users
+ */
+static CKey GenerateGenesisKey(const std::string& currency, int index) {
+    // Create deterministic seed from currency + index
+    std::string seed = "O_BLOCKCHAIN_GENESIS_" + currency + "_" + std::to_string(index);
+    
+    // Hash the seed to get private key material
+    uint256 hash = Hash(seed);
+    
+    CKey key;
+    key.Set(hash.begin(), hash.end(), true);  // compressed pubkey
+    return key;
+}
+
+/**
+ * Create genesis seed users for bootstrap
+ * 50 users total: 10 per major currency (USD, EUR, JPY, GBP, CNY)
+ */
+static std::vector<CMutableTransaction> CreateGenesisSeedUsers() {
+    std::vector<CMutableTransaction> seed_txs;
+    
+    // Major currencies for genesis bootstrap
+    struct GenesisCurrency {
+        std::string fiat_code;
+        std::string o_code;
+        std::string country_code;
+    };
+    
+    std::vector<GenesisCurrency> genesis_currencies = {
+        {"USD", "OUSD", "USA"},
+        {"EUR", "OEUR", "FRA"},  // France as representative for Eurozone
+        {"JPY", "OJPY", "JPN"},
+        {"GBP", "OGBP", "GBR"},
+        {"CNY", "OCNY", "CHN"}
+    };
+    
+    for (const auto& curr : genesis_currencies) {
+        for (int i = 0; i < 10; i++) {
+            CMutableTransaction mtx;
+            mtx.version = CTransaction::CURRENT_VERSION;
+            
+            // Generate deterministic key for this seed user
+            CKey key = GenerateGenesisKey(curr.fiat_code, i);
+            CPubKey pubkey = key.GetPubKey();
+            
+            // Create USER_VERIFY data
+            OTransactions::CUserVerificationData user_data;
+            user_data.user_id = "genesis_" + curr.fiat_code + "_" + std::to_string(i);
+            user_data.identity_provider = "genesis";
+            user_data.country_code = curr.country_code;
+            user_data.birth_currency = curr.o_code;
+            user_data.verification_data = "{\"type\":\"genesis_seed\",\"currency\":\"" + curr.o_code + "\"}";
+            user_data.provider_sig = {};  // Genesis users don't need provider signature
+            user_data.timestamp = 1609459200; // Jan 1, 2021 00:00:00 UTC
+            user_data.expiration = 0; // Never expires
+            user_data.o_pubkey = pubkey;
+            
+            // Sign with user's private key
+            uint256 hash = user_data.GetHash();
+            std::vector<unsigned char> signature;
+            if (key.SignCompact(hash, signature)) {
+                user_data.user_sig = signature;
+            }
+            
+            // Create OP_RETURN output with user verification data
+            CTxOut out;
+            out.nValue = 0;
+            out.scriptPubKey = user_data.ToScript();
+            mtx.vout.push_back(out);
+            
+            seed_txs.push_back(mtx);
+        }
+    }
+    
+    LogPrintf("O Genesis: Created %d seed user transactions (5 currencies × 10 users)\n", 
+              static_cast<int>(seed_txs.size()));
+    
+    return seed_txs;
+}
+
 static CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesisOutputScript, uint32_t nTime, uint32_t nNonce, uint32_t nBits, int32_t nVersion, const CAmount& genesisReward)
 {
     CMutableTransaction txNew;
@@ -53,8 +138,17 @@ static CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesi
     genesis.nNonce   = nNonce;
     genesis.nVersion = nVersion;
     genesis.vtx.push_back(MakeTransactionRef(std::move(txNew)));
+    
+    // O Blockchain: Add genesis seed users for bootstrap (DISABLED for now - causes startup crash)
+    // TODO: Implement genesis seed users properly
+    // auto seed_users = CreateGenesisSeedUsers();
+    // for (const auto& seed_tx : seed_users) {
+    //     genesis.vtx.push_back(MakeTransactionRef(seed_tx));
+    // }
+    
     genesis.hashPrevBlock.SetNull();
     genesis.hashMerkleRoot = BlockMerkleRoot(genesis);
+    
     return genesis;
 }
 

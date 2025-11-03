@@ -233,12 +233,13 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock()
                     int invite_count = std::min(gap, 10); // Max 10 per block per currency
                     
                     if (invite_count > 0) {
-                        // Create invitation objects
+                        // Create invitation objects (pass height for bootstrap mode)
                         std::vector<OMeasurement::MeasurementInvite> invites =
                             OMeasurement::g_measurement_system.CreateInvites(
                                 invite_count,
                                 OMeasurement::MeasurementType::WATER_PRICE,
-                                currency);
+                                currency,
+                                nHeight);
                         
                         // Convert to blockchain transactions
                         for (const auto& invite : invites) {

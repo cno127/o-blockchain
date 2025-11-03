@@ -434,9 +434,9 @@ public:
     // blockchain transactions or removed entirely.
     // TODO: Update these to create MEASUREMENT_INVITE blockchain transactions
     
-    /** Create measurement invites for users (DEPRECATED - creates RAM-only invites) */
+    /** Create measurement invites for users (height parameter for bootstrap mode threshold) */
     std::vector<MeasurementInvite> CreateInvites(
-        int count, MeasurementType type, const std::string& currency_code = "");
+        int count, MeasurementType type, const std::string& currency_code = "", int height = 0);
     
     /** Create invitations to achieve target measurement count (DEPRECATED - creates RAM-only invites) */
     std::vector<MeasurementInvite> CreateInvitesForTargetMeasurements(
@@ -446,7 +446,7 @@ public:
     void BroadcastInvites(const std::vector<MeasurementInvite>& invites);
     
     /** Check if measurement type is ready for invitations */
-    bool CheckMeasurementReadiness(MeasurementType type, const std::string& currency_code) const;
+    bool CheckMeasurementReadiness(MeasurementType type, const std::string& currency_code, int height = 0) const;
     
     /** Get O currency code from fiat currency code */
     std::string GetOCurrencyFromFiat(const std::string& fiat_currency) const;
