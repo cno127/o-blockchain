@@ -9,6 +9,7 @@
 #include <consensus/currency_disappearance_handling.h>
 #include <consensus/measurement_readiness.h>
 #include <consensus/stabilization_mining.h>
+#include <consensus/currency_exchange.h>
 #include <hash.h>
 #include <logging.h>
 #include <random.h>
@@ -537,10 +538,8 @@ std::map<std::string, int> MeasurementSystem::GetMeasurementTargetStatistics() c
 {
     std::map<std::string, int> stats;
     
-    // Get all supported currencies
-    std::vector<std::string> currencies = {
-        "USD", "EUR", "JPY", "GBP", "CNY", "CAD", "AUD", "CHF", "NZD", "SEK", "NOK", "DKK", "PLN", "CZK", "HUF", "RON", "BGN", "HRK", "RUB", "TRY", "ZAR", "BRL", "MXN", "INR", "KRW", "SGD", "HKD", "TWD", "THB", "MYR", "IDR", "PHP", "VND", "PKR", "BDT", "LKR", "NPR", "AFN", "AMD", "AZN", "BYN", "BGN", "BIF", "KHR", "KGS", "KZT", "LAK", "LSL", "LTL", "MDL", "MKD", "MNT", "RON", "RSD", "TJS", "TMT", "UAH", "UZS", "XDR", "ZWL"
-    };
+    // Get all supported fiat currencies
+    std::vector<std::string> currencies = GetSupportedFiatCurrencies();
     
     for (const auto& currency : currencies) {
         // Water price targets
@@ -556,6 +555,31 @@ std::map<std::string, int> MeasurementSystem::GetMeasurementTargetStatistics() c
     }
     
     return stats;
+}
+
+std::vector<std::string> MeasurementSystem::GetSupportedOCurrencies() const
+{
+    std::vector<std::string> o_currencies = g_currency_exchange_manager.GetSupportedCurrencies();
+    std::sort(o_currencies.begin(), o_currencies.end());
+    o_currencies.erase(std::unique(o_currencies.begin(), o_currencies.end()), o_currencies.end());
+    return o_currencies;
+}
+
+std::vector<std::string> MeasurementSystem::GetSupportedFiatCurrencies() const
+{
+    std::vector<std::string> fiat_currencies;
+    auto o_currencies = GetSupportedOCurrencies();
+    fiat_currencies.reserve(o_currencies.size());
+    for (const auto& o_currency : o_currencies) {
+        if (!o_currency.empty() && o_currency[0] == 'O' && o_currency.size() > 1) {
+            fiat_currencies.push_back(o_currency.substr(1));
+        } else {
+            fiat_currencies.push_back(o_currency);
+        }
+    }
+    std::sort(fiat_currencies.begin(), fiat_currencies.end());
+    fiat_currencies.erase(std::unique(fiat_currencies.begin(), fiat_currencies.end()), fiat_currencies.end());
+    return fiat_currencies;
 }
 
 double MeasurementSystem::GetConversionRate(MeasurementType type) const
@@ -618,17 +642,8 @@ void MeasurementSystem::CalculateDailyAverages(int height) {
     LogPrintf("O Measurement: Calculating daily averages for %s at height %d\n", 
               today.c_str(), height);
     
-    // Get all supported currencies
-    std::vector<std::string> currencies = {
-        "OUSD", "OEUR", "OJPY", "OGBP", "OCNY", "OCAD", "OAUD", "OCHF", "ONZD",
-        "OSEK", "ONOK", "ODKK", "OPLN", "OCZK", "OHUF", "OKRW", "OSGD", "OHKD",
-        "OTWD", "OTHB", "OMYR", "OIDR", "OPHP", "OVND", "OINR", "OBRL", "ORUB",
-        "OZAR", "OTRY", "OEGP", "OSAR", "OAED", "OILS", "OQAR", "OKWD", "OBHD",
-        "OOMR", "OJOD", "OLBP", "OMAD", "OTND", "ODZD", "OMRO", "OLYD", "OXOF",
-        "OXAF", "OXPF", "OALL", "OAMD", "OAZN", "OBYN", "OBGN", "OBIF", "OKHR",
-        "OKGS", "OKZT", "OLAK", "OLSL", "OLTL", "OMDL", "OMKD", "OMNT", "ORON",
-        "ORSD", "OTJS", "OTMT", "OUAH", "OUZS", "OXDR", "OZWL"
-    };
+    // Get all supported O currencies
+    std::vector<std::string> currencies = GetSupportedOCurrencies();
     
     for (const auto& currency : currencies) {
         CalculateDailyAverageForCurrency(currency, today, height);
@@ -702,10 +717,8 @@ void MeasurementSystem::CalculateDailyAverageForCurrency(const std::string& curr
 void MeasurementSystem::RecalculateCurrencyStability(int height) {
     LogPrintf("O Measurement: Recalculating currency stability status...\n");
     
-    // Get all supported currencies
-    std::vector<std::string> currencies = {
-        "USD", "EUR", "JPY", "GBP", "CNY", "CAD", "AUD", "CHF", "NZD", "SEK", "NOK", "DKK", "PLN", "CZK", "HUF", "RON", "BGN", "HRK", "RUB", "TRY", "ZAR", "BRL", "MXN", "INR", "KRW", "SGD", "HKD", "TWD", "THB", "MYR", "IDR", "PHP", "VND", "PKR", "BDT", "LKR", "NPR", "AFN", "AMD", "AZN", "BYN", "BGN", "BIF", "KHR", "KGS", "KZT", "LAK", "LSL", "LTL", "MDL", "MKD", "MNT", "RON", "RSD", "TJS", "TMT", "UAH", "UZS", "XDR", "ZWL"
-    };
+    // Get all supported fiat currencies
+    std::vector<std::string> currencies = GetSupportedFiatCurrencies();
     
     int stability_updates = 0;
     
@@ -2039,10 +2052,8 @@ void MeasurementSystem::CheckAndCreateInvitations()
     
     int total_invites_created = 0;
     
-    // Get all supported currencies
-    std::vector<std::string> currencies = {
-        "USD", "EUR", "JPY", "GBP", "CNY", "CAD", "AUD", "CHF", "NZD", "SEK", "NOK", "DKK", "PLN", "CZK", "HUF", "RON", "BGN", "HRK", "RUB", "TRY", "ZAR", "BRL", "MXN", "INR", "KRW", "SGD", "HKD", "TWD", "THB", "MYR", "IDR", "PHP", "VND", "PKR", "BDT", "LKR", "NPR", "AFN", "AMD", "AZN", "BYN", "BGN", "BIF", "KHR", "KGS", "KZT", "LAK", "LSL", "LTL", "MDL", "MKD", "MNT", "RON", "RSD", "TJS", "TMT", "UAH", "UZS", "XDR", "ZWL"
-    };
+    // Get all supported fiat currencies
+    std::vector<std::string> currencies = GetSupportedFiatCurrencies();
     
     // Check water price measurements for all currencies
     for (const auto& currency : currencies) {
@@ -2068,10 +2079,8 @@ void MeasurementSystem::MonitorMeasurementTargets()
 {
     LogPrintf("O Measurement: Monitoring measurement targets...\n");
     
-    // Get all supported currencies
-    std::vector<std::string> currencies = {
-        "USD", "EUR", "JPY", "GBP", "CNY", "CAD", "AUD", "CHF", "NZD", "SEK", "NOK", "DKK", "PLN", "CZK", "HUF", "RON", "BGN", "HRK", "RUB", "TRY", "ZAR", "BRL", "MXN", "INR", "KRW", "SGD", "HKD", "TWD", "THB", "MYR", "IDR", "PHP", "VND", "PKR", "BDT", "LKR", "NPR", "AFN", "AMD", "AZN", "BYN", "BGN", "BIF", "KHR", "KGS", "KZT", "LAK", "LSL", "LTL", "MDL", "MKD", "MNT", "RON", "RSD", "TJS", "TMT", "UAH", "UZS", "XDR", "ZWL"
-    };
+    // Get all supported fiat currencies
+    std::vector<std::string> currencies = GetSupportedFiatCurrencies();
     
     int currencies_needing_attention = 0;
     

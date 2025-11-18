@@ -6,6 +6,7 @@
 #include <bitcoin-build-config.h> // IWYU pragma: keep
 
 #include <rest.h>
+#include <rest/o_mobile_api.h>
 
 #include <blockfilter.h>
 #include <chain.h>
@@ -1005,6 +1006,78 @@ static bool rest_blockhash_by_height(const std::any& context, HTTPRequest* req,
     }
 }
 
+// Mobile API routing functions
+static bool rest_api_users_router(const std::any& context, HTTPRequest* req, const std::string& strReq)
+{
+    std::string path = req->GetURI();
+    if (path.find("/register") != std::string::npos) {
+        return rest_user_register(context, req, strReq);
+    } else if (path.find("/legal-restrictions") != std::string::npos) {
+        return rest_user_legal_restrictions(context, req, strReq);
+    } else if (path.find("/status") != std::string::npos) {
+        return rest_user_status(context, req, strReq);
+    }
+    return RESTERR(req, HTTP_NOT_FOUND, "Endpoint not found");
+}
+
+static bool rest_api_exchange_rates_router(const std::any& context, HTTPRequest* req, const std::string& strReq)
+{
+    std::string path = req->GetURI();
+    if (path.find("/measured") != std::string::npos) {
+        return rest_exchange_rate_measured(context, req, strReq);
+    } else if (path.find("/historical") != std::string::npos) {
+        return rest_exchange_rate_historical(context, req, strReq);
+    } else {
+        return rest_exchange_rate_current(context, req, strReq);
+    }
+}
+
+static bool rest_api_wallet_router(const std::any& context, HTTPRequest* req, const std::string& strReq)
+{
+    std::string path = req->GetURI();
+    if (path.find("/send") != std::string::npos) {
+        return rest_wallet_send(context, req, strReq);
+    } else if (path.find("/transactions") != std::string::npos) {
+        return rest_wallet_transactions(context, req, strReq);
+    } else if (path.find("/balance") != std::string::npos) {
+        return rest_wallet_balance(context, req, strReq);
+    }
+    return RESTERR(req, HTTP_NOT_FOUND, "Endpoint not found");
+}
+
+static bool rest_api_notifications_router(const std::any& context, HTTPRequest* req, const std::string& strReq)
+{
+    std::string path = req->GetURI();
+    if (path.find("/measurements") != std::string::npos) {
+        return rest_notifications_measurements(context, req, strReq);
+    } else if (path.find("/invites") != std::string::npos) {
+        return rest_notifications_invites(context, req, strReq);
+    }
+    return RESTERR(req, HTTP_NOT_FOUND, "Endpoint not found");
+}
+
+static bool rest_api_measurements_router(const std::any& context, HTTPRequest* req, const std::string& strReq)
+{
+    std::string path = req->GetURI();
+    if (path.find("/water-price") != std::string::npos) {
+        return rest_measurements_submit_water(context, req, strReq);
+    } else if (path.find("/exchange-rate") != std::string::npos) {
+        return rest_measurements_submit_exchange(context, req, strReq);
+    }
+    return RESTERR(req, HTTP_NOT_FOUND, "Endpoint not found");
+}
+
+static bool rest_api_info_router(const std::any& context, HTTPRequest* req, const std::string& strReq)
+{
+    std::string path = req->GetURI();
+    if (path.find("/stability-status") != std::string::npos) {
+        return rest_info_stability_status(context, req, strReq);
+    } else if (path.find("/currencies") != std::string::npos) {
+        return rest_info_currencies(context, req, strReq);
+    }
+    return RESTERR(req, HTTP_NOT_FOUND, "Endpoint not found");
+}
+
 static const struct {
     const char* prefix;
     bool (*handler)(const std::any& context, HTTPRequest* req, const std::string& strReq);
@@ -1021,6 +1094,16 @@ static const struct {
       {"/rest/deploymentinfo/", rest_deploymentinfo},
       {"/rest/deploymentinfo", rest_deploymentinfo},
       {"/rest/blockhashbyheight/", rest_blockhash_by_height},
+      // Mobile API endpoints (order matters - more specific first)
+      {"/rest/api/v1/users/register", rest_user_register},
+      {"/rest/api/v1/users/", rest_api_users_router},
+      {"/rest/api/v1/exchange-rates/", rest_api_exchange_rates_router},
+      {"/rest/api/v1/map/countries", rest_map_countries},
+      {"/rest/api/v1/map/country/", rest_map_country},
+      {"/rest/api/v1/wallet/", rest_api_wallet_router},
+      {"/rest/api/v1/notifications/", rest_api_notifications_router},
+      {"/rest/api/v1/measurements/submit/", rest_api_measurements_router},
+      {"/rest/api/v1/info/", rest_api_info_router},
 };
 
 void StartREST(const std::any& context)

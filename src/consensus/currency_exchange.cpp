@@ -6,6 +6,7 @@
 #include <consensus/currency_exchange.h>
 #include <consensus/amount.h>
 #include <consensus/o_amount.h>
+#include <consensus/multicurrency.h>
 #include <measurement/measurement_system.h>
 #include <hash.h>
 #include <logging.h>
@@ -446,16 +447,17 @@ void CurrencyExchangeManager::UpdateStatistics(const CurrencyExchange& exchange)
 }
 
 std::vector<std::string> CurrencyExchangeManager::GetSupportedCurrencies() const {
-    return {
-        "OUSD", "OEUR", "OJPY", "OGBP", "OCNY", "OCAD", "OAUD", "OCHF", "ONZD",
-        "OSEK", "ONOK", "ODKK", "OPLN", "OCZK", "OHUF", "OKRW", "OSGD", "OHKD",
-        "OTWD", "OTHB", "OMYR", "OIDR", "OPHP", "OVND", "OINR", "OBRL", "ORUB",
-        "OZAR", "OTRY", "OEGP", "OSAR", "OAED", "OILS", "OQAR", "OKWD", "OBHD",
-        "OOMR", "OJOD", "OLBP", "OMAD", "OTND", "ODZD", "OMRO", "OLYD", "OXOF",
-        "OXAF", "OXPF", "OALL", "OAMD", "OAZN", "OBYN", "OBGN", "OBIF", "OKHR",
-        "OKGS", "OKZT", "OLAK", "OLSL", "OLTL", "OMDL", "OMKD", "OMNT", "ORON",
-        "ORSD", "OTJS", "OTMT", "OUAH", "OUZS", "OXDR", "OZWL"
-    };
+    std::vector<std::string> currencies;
+    std::vector<CurrencyMetadata> all_currencies = g_currency_registry.GetAllCurrencies();
+    currencies.reserve(all_currencies.size());
+    for (const auto& metadata : all_currencies) {
+        if (!metadata.symbol.empty() && metadata.symbol[0] == 'O') {
+            currencies.push_back(metadata.symbol);
+        }
+    }
+    std::sort(currencies.begin(), currencies.end());
+    currencies.erase(std::unique(currencies.begin(), currencies.end()), currencies.end());
+    return currencies;
 }
 
 // ===== Cross-O Currency Exchange Rate Calculation =====

@@ -471,6 +471,12 @@ public:
     /** Get measurement target statistics */
     std::map<std::string, int> GetMeasurementTargetStatistics() const;
     
+    /** Get supported O currencies (e.g., OUSD, OEUR) */
+    std::vector<std::string> GetSupportedOCurrencies() const;
+    
+    /** Get supported fiat currencies corresponding to O currencies (e.g., USD, EUR) */
+    std::vector<std::string> GetSupportedFiatCurrencies() const;
+    
     // ===== Automated Validation System =====
     
     /** Perform automated validation on a measurement */
