@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800">
+  <!-- Background Sky -->
+  <defs>
+    <linearGradient id="skyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a0a0a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8b4513;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="earthGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#d2691e;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#cd853f;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8b4513;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="oceanGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#556b2f;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#6b8e23;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Sky -->
+  <rect width="1200" height="800" fill="url(#skyGradient)"/>
+  
+  <!-- Distant Hills -->
+  <path d="M 0 600 Q 300 580 600 590 T 1200 600 L 1200 800 L 0 800 Z" fill="#654321" opacity="0.3"/>
+  
+  <!-- Cracked Ground -->
+  <g id="ground">
+    <rect x="0" y="600" width="1200" height="200" fill="#8b4513"/>
+    <!-- Ground cracks -->
+    <path d="M 50 650 Q 150 640 250 650 T 450 640" stroke="#5c3317" stroke-width="3" fill="none"/>
+    <path d="M 200 680 Q 300 670 400 680 T 600 670" stroke="#5c3317" stroke-width="3" fill="none"/>
+    <path d="M 350 720 Q 450 710 550 720 T 750 710" stroke="#5c3317" stroke-width="3" fill="none"/>
+    <path d="M 500 750 Q 600 740 700 750 T 900 740" stroke="#5c3317" stroke-width="3" fill="none"/>
+    <path d="M 650 680 Q 750 670 850 680 T 1050 670" stroke="#5c3317" stroke-width="3" fill="none"/>
+    <path d="M 800 720 Q 900 710 1000 720 T 1150 710" stroke="#5c3317" stroke-width="3" fill="none"/>
+    <!-- Vertical cracks -->
+    <line x1="150" y1="600" x2="150" y2="750" stroke="#5c3317" stroke-width="2"/>
+    <line x1="400" y1="600" x2="400" y2="750" stroke="#5c3317" stroke-width="2"/>
+    <line x1="700" y1="600" x2="700" y2="750" stroke="#5c3317" stroke-width="2"/>
+    <line x1="950" y1="600" x2="950" y2="750" stroke="#5c3317" stroke-width="2"/>
+  </g>
+  
+  <!-- Rocks -->
+  <ellipse cx="850" cy="680" rx="25" ry="20" fill="#654321"/>
+  <ellipse cx="1050" cy="720" rx="30" ry="25" fill="#654321"/>
+  <ellipse cx="1100" cy="690" rx="20" ry="15" fill="#654321"/>
+  
+  <!-- Cracked Earth Globe -->
+  <g id="earth" transform="translate(200, 200)">
+    <!-- Earth sphere base -->
+    <circle cx="200" cy="200" r="180" fill="url(#earthGradient)"/>
+    
+    <!-- Continents (simplified, cracked) -->
+    <path d="M 80 150 Q 120 120 160 140 Q 200 160 240 150 Q 280 140 320 160 Q 300 200 280 240 Q 260 280 240 300 Q 200 320 160 300 Q 120 280 100 240 Q 80 200 80 150 Z" 
+          fill="#cd853f" opacity="0.8"/>
+    <path d="M 100 250 Q 140 230 180 250 Q 220 270 260 250 Q 280 280 260 310 Q 240 340 200 350 Q 160 340 140 310 Q 120 280 100 250 Z" 
+          fill="#cd853f" opacity="0.8"/>
+    
+    <!-- Oceans (cracked, desaturated) -->
+    <path d="M 50 100 Q 100 80 150 100 Q 200 120 250 100 Q 300 80 350 100 Q 320 150 300 200 Q 280 250 250 280 Q 200 300 150 280 Q 100 260 80 220 Q 60 180 50 100 Z" 
+          fill="url(#oceanGradient)" opacity="0.6"/>
+    
+    <!-- Cracks on Earth -->
+    <path d="M 100 100 Q 150 120 200 100 T 300 100" stroke="#5c3317" stroke-width="4" fill="none"/>
+    <path d="M 150 150 Q 200 170 250 150 T 350 150" stroke="#5c3317" stroke-width="4" fill="none"/>
+    <path d="M 80 200 Q 130 220 180 200 T 280 200" stroke="#5c3317" stroke-width="4" fill="none"/>
+    <path d="M 120 250 Q 170 270 220 250 T 320 250" stroke="#5c3317" stroke-width="4" fill="none"/>
+    <path d="M 100 300 Q 150 320 200 300 T 300 300" stroke="#5c3317" stroke-width="4" fill="none"/>
+    <!-- Vertical cracks -->
+    <line x1="150" y1="100" x2="150" y2="300" stroke="#5c3317" stroke-width="3"/>
+    <line x1="250" y1="100" x2="250" y2="300" stroke="#5c3317" stroke-width="3"/>
+    <line x1="200" y1="80" x2="200" y2="320" stroke="#5c3317" stroke-width="3"/>
+  </g>
+  
+  <!-- Sign Post -->
+  <rect x="800" y="450" width="15" height="200" fill="#654321"/>
+  
+  <!-- Sign Board -->
+  <rect x="750" y="400" width="300" height="120" rx="5" fill="#f5deb3" stroke="#8b4513" stroke-width="3"/>
+  
+  <!-- Sign Text -->
+  <text x="900" y="440" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#000000" text-anchor="middle">WE DIDN'T HAVE</text>
+  <text x="900" y="475" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#000000" text-anchor="middle">THE MONEY TO</text>
+  <text x="900" y="510" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#000000" text-anchor="middle">FIX IT</text>
+</svg>
+
