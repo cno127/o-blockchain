@@ -340,4 +340,7 @@ void RegisterOMeasurementReadinessRPCCommands(CRPCTable &tableRPC)
     for (const auto& c : commands) {
         tableRPC.appendCommand(c.name, &c);
     }
+    // Add alias for getmeasurementreadinessstatistics (expected by tests)
+    static const CRPCCommand alias_getmeasurementreadinessstatistics{"measurement_readiness", &getreadinessstatistics};
+    tableRPC.appendCommand("getmeasurementreadinessstatistics", &alias_getmeasurementreadinessstatistics);
 }

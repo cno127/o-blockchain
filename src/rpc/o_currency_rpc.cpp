@@ -204,4 +204,7 @@ void RegisterOCurrencyRPCCommands(CRPCTable& t)
     {
         t.appendCommand(c.name, &c);
     }
+    // Add alias for listocurrencies (expected by tests)
+    static const CRPCCommand alias_listocurrencies{"o", &listcurrencies};
+    t.appendCommand("listocurrencies", &alias_listocurrencies);
 }
