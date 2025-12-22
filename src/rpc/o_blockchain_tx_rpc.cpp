@@ -24,6 +24,7 @@
 #include <univalue.h>
 #include <util/moneystr.h>
 #include <util/strencodings.h>
+#include <util/string.h>
 #include <validation.h>
 #include <wallet/spend.h>
 #include <wallet/wallet.h>
@@ -556,7 +557,7 @@ static RPCHelpMan submitinvitetx()
             {"invited_user_pubkey", RPCArg::Type::STR, RPCArg::Optional::NO, "Public key of invited user"},
             {"measurement_type", RPCArg::Type::STR, RPCArg::Optional::NO, "'water_price' or 'exchange_rate'"},
             {"currency_code", RPCArg::Type::STR, RPCArg::Default{""}, "Optional: specific currency"},
-            {"expires_at", RPCArg::Type::NUM, RPCArg::Optional::NO, "Expiration timestamp"},
+            {"expires_at", RPCArg::Type::STR, RPCArg::Optional::NO, "Expiration timestamp (numeric string or number)"},
         },
         RPCResult{
             RPCResult::Type::OBJ, "", "",
@@ -596,7 +597,13 @@ static RPCHelpMan submitinvitetx()
             }
             
             data.currency_code = request.params[3].isNull() ? "" : request.params[3].get_str();
-            data.expires_at = request.params[4].getInt<int64_t>();
+            // Handle expires_at as either number or string (bitcoin-cli sometimes passes as string)
+            if (request.params[4].isNum()) {
+                data.expires_at = request.params[4].getInt<int64_t>();
+            } else {
+                std::string expires_str = request.params[4].get_str();
+                data.expires_at = LocaleIndependentAtoi<int64_t>(expires_str);
+            }
             data.created_at = GetTime();
             data.block_height = 0; // Will be set when included in block
             
