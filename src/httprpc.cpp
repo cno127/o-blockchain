@@ -15,7 +15,11 @@
 #include <util/fs_helpers.h>
 #include <util/strencodings.h>
 #include <util/string.h>
+#include <util/any.h>
 #include <walletinitinterface.h>
+#include <wallet/context.h>
+#include <interfaces/wallet.h>
+#include <node/context.h>
 
 #include <algorithm>
 #include <iterator>
@@ -156,8 +160,23 @@ static bool HTTPReq_JSONRPC(const std::any& context, HTTPRequest* req)
     }
 
     JSONRPCRequest jreq;
-    jreq.context = context;
+    // Set the URI early so we can check if it's a wallet endpoint
+    jreq.URI = req->GetURI();
     jreq.peerAddr = req->GetPeer().ToStringAddrPort();
+    
+    // For /wallet/ endpoint, use WalletContext instead of NodeContext
+    if (jreq.URI.starts_with("/wallet/")) {
+        auto node_context = util::AnyPtr<node::NodeContext>(context);
+        if (node_context && node_context->wallet_loader) {
+            // Get WalletContext from wallet_loader
+            jreq.context = node_context->wallet_loader->context();
+        } else {
+            // Fallback to original context if wallet_loader not available
+            jreq.context = context;
+        }
+    } else {
+        jreq.context = context;
+    }
     if (!RPCAuthorized(authHeader.second, jreq.authUser)) {
         LogPrintf("ThreadRPCServer incorrect password attempt from %s\n", jreq.peerAddr);
 
@@ -177,8 +196,7 @@ static bool HTTPReq_JSONRPC(const std::any& context, HTTPRequest* req)
         if (!valRequest.read(req->ReadBody()))
             throw JSONRPCError(RPC_PARSE_ERROR, "Parse error");
 
-        // Set the URI
-        jreq.URI = req->GetURI();
+        // URI already set above
 
         UniValue reply;
         bool user_has_whitelist = g_rpc_whitelist.count(jreq.authUser);

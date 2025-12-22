@@ -49,7 +49,7 @@ static RPCHelpMan listcurrencies()
             UniValue result(UniValue::VOBJ);
             auto all_currencies = g_currency_registry.GetAllCurrencies();
             
-            std::vector<UniValue> filtered_currencies;
+            UniValue currencies_arr(UniValue::VARR);
             
             for (const auto& currency : all_currencies) {
                 bool include = false;
@@ -72,12 +72,12 @@ static RPCHelpMan listcurrencies()
                     currency_obj.pushKV("decimals", static_cast<int64_t>(currency.decimals));
                     currency_obj.pushKV("is_fiat", currency.is_fiat);
                     currency_obj.pushKV("issuer_address", currency.issuer_address);
-                    filtered_currencies.push_back(currency_obj);
+                    currencies_arr.push_back(currency_obj);
                 }
             }
             
-            result.pushKV("total", static_cast<int64_t>(filtered_currencies.size()));
-            result.pushKV("currencies", filtered_currencies);
+            result.pushKV("total", static_cast<int64_t>(currencies_arr.size()));
+            result.pushKV("currencies", currencies_arr);
             
             return result;
         }
@@ -168,10 +168,10 @@ static RPCHelpMan registercurrency()
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
         {
             // Note: In a real implementation, this would require special permissions
-            CurrencyId id = static_cast<CurrencyId>(request.params[0].get_int64());
+            CurrencyId id = static_cast<CurrencyId>(request.params[0].getInt<int64_t>());
             std::string symbol = request.params[1].get_str();
             std::string name = request.params[2].get_str();
-            uint8_t decimals = static_cast<uint8_t>(request.params[3].get_int64());
+            uint8_t decimals = static_cast<uint8_t>(request.params[3].getInt<int64_t>());
             bool is_fiat = request.params[4].get_bool();
             
             std::string issuer_address = "";

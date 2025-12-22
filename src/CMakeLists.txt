@@ -125,6 +125,7 @@ add_library(bitcoin_consensus STATIC EXCLUDE_FROM_ALL
   consensus/o_tx_validation.cpp
   consensus/tx_check.cpp
   consensus/user_consensus.cpp
+  consensus/multicurrency.cpp
   hash.cpp
   primitives/block.cpp
   primitives/transaction.cpp
@@ -313,6 +314,7 @@ add_library(bitcoin_node STATIC EXCLUDE_FROM_ALL
   policy/settings.cpp
   policy/truc_policy.cpp
   rest.cpp
+  rest/o_mobile_api.cpp
   rpc/blockchain.cpp
   rpc/external_signer.cpp
   rpc/fees.cpp
@@ -330,6 +332,7 @@ add_library(bitcoin_node STATIC EXCLUDE_FROM_ALL
   rpc/o_exchange_rate_init_rpc.cpp
   rpc/o_measurement_readiness_rpc.cpp
   rpc/o_user_verification_rpc.cpp
+  rpc/o_currency_rpc.cpp
          # rpc/o_currency_lifecycle_rpc.cpp  # Temporarily disabled due to RPC API changes
          # rpc/o_brightid_rpc.cpp  # Temporarily disabled due to RPC API changes
   rpc/output_script.cpp

@@ -4,6 +4,7 @@
 
 #include <consensus/multicurrency.h>
 #include <util/strencodings.h>
+#include <logging.h>
 
 CurrencyRegistry::CurrencyRegistry() {
     InitializeDefaultCurrencies();

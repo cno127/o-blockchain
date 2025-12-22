@@ -131,7 +131,7 @@ public:
     
     /** Serialization */
     SERIALIZE_METHODS(CMultiCurrencyTxIn, obj) {
-        READWRITE(obj.prevout, obj.scriptSig, obj.nSequence, obj.scriptWitness);
+        READWRITE(obj.prevout, obj.scriptSig, obj.nSequence, obj.scriptWitness.stack);
     }
 };
 

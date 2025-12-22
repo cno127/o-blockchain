@@ -119,7 +119,7 @@ static std::string ExtractOCurrencyFromPath(const std::string& path)
 
 bool rest_user_register(const std::any& context, HTTPRequest* req, const std::string& strReq)
 {
-    if (req->GetRequestMethod() != "POST") {
+    if (req->GetRequestMethod() != HTTPRequest::POST) {
         return WriteErrorResponse(req, "METHOD_NOT_ALLOWED", "Only POST method is allowed", HTTP_BAD_METHOD);
     }
     
@@ -158,9 +158,13 @@ bool rest_user_register(const std::any& context, HTTPRequest* req, const std::st
     try {
         // Call the registeruser RPC (would need to expose it properly)
         // For now, we'll create the user directly
-        CPubKey publickey;
-        if (!publickey.SetHex(publickey_str)) {
-            return WriteErrorResponse(req, "INVALID_PUBLICKEY", "Invalid public key format");
+        std::vector<unsigned char> pubkey_bytes = ParseHex(publickey_str);
+        if (pubkey_bytes.size() != 33 && pubkey_bytes.size() != 65) {
+            return WriteErrorResponse(req, "INVALID_PUBLICKEY", "Invalid public key format (expected 33 or 65 bytes)");
+        }
+        CPubKey publickey(pubkey_bytes.begin(), pubkey_bytes.end());
+        if (!publickey.IsFullyValid()) {
+            return WriteErrorResponse(req, "INVALID_PUBLICKEY", "Invalid public key");
         }
         
         OfficialUser new_user;
@@ -207,7 +211,7 @@ bool rest_user_register(const std::any& context, HTTPRequest* req, const std::st
         response.pushKV("status", "pending_verification");
         response.pushKV("message", "User registration submitted successfully. Awaiting endorsements.");
         response.pushKV("registration_height", 0);
-        response.pushKV("kyc_required", policy->compliance_level == ComplianceLevel::KYC_REQUIRED);
+        response.pushKV("kyc_required", policy->compliance_level == ComplianceLevel::FULL);
         
         UniValue methods(UniValue::VARR);
         for (const auto& m : method_strings) {
@@ -224,7 +228,7 @@ bool rest_user_register(const std::any& context, HTTPRequest* req, const std::st
 
 bool rest_user_status(const std::any& context, HTTPRequest* req, const std::string& strReq)
 {
-    if (req->GetRequestMethod() != "GET") {
+    if (req->GetRequestMethod() != HTTPRequest::GET) {
         return WriteErrorResponse(req, "METHOD_NOT_ALLOWED", "Only GET method is allowed", HTTP_BAD_METHOD);
     }
     
@@ -233,9 +237,13 @@ bool rest_user_status(const std::any& context, HTTPRequest* req, const std::stri
         return WriteErrorResponse(req, "INVALID_PARAMETERS", "Public key not found in URL path");
     }
     
-    CPubKey publickey;
-    if (!publickey.SetHex(publickey_str)) {
-        return WriteErrorResponse(req, "INVALID_PUBLICKEY", "Invalid public key format");
+    std::vector<unsigned char> pubkey_bytes = ParseHex(publickey_str);
+    if (pubkey_bytes.size() != 33 && pubkey_bytes.size() != 65) {
+        return WriteErrorResponse(req, "INVALID_PUBLICKEY", "Invalid public key format (expected 33 or 65 bytes)");
+    }
+    CPubKey publickey(pubkey_bytes.begin(), pubkey_bytes.end());
+    if (!publickey.IsFullyValid()) {
+        return WriteErrorResponse(req, "INVALID_PUBLICKEY", "Invalid public key");
     }
     
     // Get user status from consensus
@@ -278,7 +286,7 @@ bool rest_user_status(const std::any& context, HTTPRequest* req, const std::stri
 
 bool rest_user_legal_restrictions(const std::any& context, HTTPRequest* req, const std::string& strReq)
 {
-    if (req->GetRequestMethod() != "GET") {
+    if (req->GetRequestMethod() != HTTPRequest::GET) {
         return WriteErrorResponse(req, "METHOD_NOT_ALLOWED", "Only GET method is allowed", HTTP_BAD_METHOD);
     }
     
@@ -287,9 +295,13 @@ bool rest_user_legal_restrictions(const std::any& context, HTTPRequest* req, con
         return WriteErrorResponse(req, "INVALID_PARAMETERS", "Public key not found in URL path");
     }
     
-    CPubKey publickey;
-    if (!publickey.SetHex(publickey_str)) {
-        return WriteErrorResponse(req, "INVALID_PUBLICKEY", "Invalid public key format");
+    std::vector<unsigned char> pubkey_bytes = ParseHex(publickey_str);
+    if (pubkey_bytes.size() != 33 && pubkey_bytes.size() != 65) {
+        return WriteErrorResponse(req, "INVALID_PUBLICKEY", "Invalid public key format (expected 33 or 65 bytes)");
+    }
+    CPubKey publickey(pubkey_bytes.begin(), pubkey_bytes.end());
+    if (!publickey.IsFullyValid()) {
+        return WriteErrorResponse(req, "INVALID_PUBLICKEY", "Invalid public key");
     }
     
     // Get user's country (would need to query from user registry)
@@ -329,12 +341,12 @@ bool rest_user_legal_restrictions(const std::any& context, HTTPRequest* req, con
     
     UniValue response(UniValue::VOBJ);
     response.pushKV("country_code", policy->country_code);
-    response.pushKV("requires_kyc", policy->compliance_level == ComplianceLevel::KYC_REQUIRED);
+    response.pushKV("requires_kyc", policy->compliance_level == ComplianceLevel::FULL);
     
     std::string access_level_str;
     switch (policy->access_level) {
-        case AccessLevel::FULL:
-            access_level_str = "full";
+        case AccessLevel::ALLOWED:
+            access_level_str = "allowed";
             break;
         case AccessLevel::RESTRICTED:
             access_level_str = "restricted";
@@ -349,14 +361,14 @@ bool rest_user_legal_restrictions(const std::any& context, HTTPRequest* req, con
     
     std::string compliance_str;
     switch (policy->compliance_level) {
+        case ComplianceLevel::BASIC:
+            compliance_str = "basic";
+            break;
         case ComplianceLevel::STANDARD:
             compliance_str = "standard";
             break;
-        case ComplianceLevel::KYC_REQUIRED:
-            compliance_str = "kyc_required";
-            break;
-        case ComplianceLevel::ENHANCED:
-            compliance_str = "enhanced";
+        case ComplianceLevel::FULL:
+            compliance_str = "full";
             break;
         default:
             compliance_str = "unknown";
@@ -384,7 +396,7 @@ bool rest_user_legal_restrictions(const std::any& context, HTTPRequest* req, con
 
 bool rest_exchange_rate_current(const std::any& context, HTTPRequest* req, const std::string& strReq)
 {
-    if (req->GetRequestMethod() != "GET") {
+    if (req->GetRequestMethod() != HTTPRequest::GET) {
         return WriteErrorResponse(req, "METHOD_NOT_ALLOWED", "Only GET method is allowed", HTTP_BAD_METHOD);
     }
     
@@ -394,18 +406,18 @@ bool rest_exchange_rate_current(const std::any& context, HTTPRequest* req, const
     }
     
     // Get exchange rate data
-    std::string fiat_currency = g_measurement_system.GetCorrespondingFiatCurrency(o_currency);
+    std::string fiat_currency = OMeasurement::g_measurement_system.GetCorrespondingFiatCurrency(o_currency);
     if (fiat_currency.empty()) {
         return WriteErrorResponse(req, "INVALID_CURRENCY", "Invalid O currency code");
     }
     
-    auto avg_result = g_measurement_system.GetAverageExchangeRateWithConfidence(o_currency, fiat_currency, 7);
+    auto avg_result = OMeasurement::g_measurement_system.GetAverageExchangeRateWithConfidence(o_currency, fiat_currency, 7);
     if (!avg_result.has_value()) {
         return WriteErrorResponse(req, "NO_DATA", "No exchange rate data available");
     }
     
-    double theoretical_rate = g_measurement_system.GetTheoreticalExchangeRate(o_currency);
-    double deviation = g_measurement_system.CalculateStabilityDeviation(o_currency, avg_result->value);
+    double theoretical_rate = OMeasurement::g_measurement_system.GetTheoreticalExchangeRate(o_currency);
+    double deviation = OMeasurement::g_measurement_system.CalculateStabilityDeviation(o_currency, avg_result->value);
     bool is_stable = deviation <= 0.10; // 10% tolerance
     
     UniValue response(UniValue::VOBJ);
@@ -444,7 +456,7 @@ bool rest_exchange_rate_current(const std::any& context, HTTPRequest* req, const
 
 bool rest_map_countries(const std::any& context, HTTPRequest* req, const std::string& strReq)
 {
-    if (req->GetRequestMethod() != "GET") {
+    if (req->GetRequestMethod() != HTTPRequest::GET) {
         return WriteErrorResponse(req, "METHOD_NOT_ALLOWED", "Only GET method is allowed", HTTP_BAD_METHOD);
     }
     
@@ -461,13 +473,13 @@ bool rest_map_countries(const std::any& context, HTTPRequest* req, const std::st
             continue;
         }
         
-        auto avg_water = g_measurement_system.GetAverageWaterPrice(currency, 30);
+        auto avg_water = OMeasurement::g_measurement_system.GetAverageWaterPrice(currency, 30);
         if (!avg_water.has_value()) continue;
         
-        auto avg_exchange = g_measurement_system.GetAverageExchangeRateWithConfidence(o_currency, currency, 7);
+        auto avg_exchange = OMeasurement::g_measurement_system.GetAverageExchangeRateWithConfidence(o_currency, currency, 7);
         if (!avg_exchange.has_value()) continue;
         
-        double deviation = g_measurement_system.CalculateStabilityDeviation(o_currency, avg_exchange->value);
+        double deviation = OMeasurement::g_measurement_system.CalculateStabilityDeviation(o_currency, avg_exchange->value);
         bool is_stable = deviation <= 0.10;
         
         if (is_stable) stable_count++;
@@ -506,7 +518,7 @@ bool rest_map_countries(const std::any& context, HTTPRequest* req, const std::st
 
 bool rest_notifications_invites(const std::any& context, HTTPRequest* req, const std::string& strReq)
 {
-    if (req->GetRequestMethod() != "GET") {
+    if (req->GetRequestMethod() != HTTPRequest::GET) {
         return WriteErrorResponse(req, "METHOD_NOT_ALLOWED", "Only GET method is allowed", HTTP_BAD_METHOD);
     }
     
@@ -515,17 +527,21 @@ bool rest_notifications_invites(const std::any& context, HTTPRequest* req, const
         return WriteErrorResponse(req, "INVALID_PARAMETERS", "Public key not found in URL path");
     }
     
-    CPubKey publickey;
-    if (!publickey.SetHex(publickey_str)) {
-        return WriteErrorResponse(req, "INVALID_PUBLICKEY", "Invalid public key format");
+    std::vector<unsigned char> pubkey_bytes = ParseHex(publickey_str);
+    if (pubkey_bytes.size() != 33 && pubkey_bytes.size() != 65) {
+        return WriteErrorResponse(req, "INVALID_PUBLICKEY", "Invalid public key format (expected 33 or 65 bytes)");
+    }
+    CPubKey publickey(pubkey_bytes.begin(), pubkey_bytes.end());
+    if (!publickey.IsFullyValid()) {
+        return WriteErrorResponse(req, "INVALID_PUBLICKEY", "Invalid public key");
     }
     
     // Get active invites from database
-    if (!g_measurement_db) {
+    if (!OMeasurement::g_measurement_db) {
         return WriteErrorResponse(req, "DATABASE_ERROR", "Measurement database not initialized", HTTP_INTERNAL_SERVER_ERROR);
     }
     
-    std::vector<OMeasurement::MeasurementInvite> active_invites = g_measurement_db->GetActiveInvites();
+    std::vector<OMeasurement::MeasurementInvite> active_invites = OMeasurement::g_measurement_db->GetActiveInvites();
     
     // Filter invites for this user
     int64_t current_time = GetTime();
@@ -580,7 +596,7 @@ bool rest_notifications_invites(const std::any& context, HTTPRequest* req, const
 
 bool rest_exchange_rate_measured(const std::any& context, HTTPRequest* req, const std::string& strReq)
 {
-    if (req->GetRequestMethod() != "GET") {
+    if (req->GetRequestMethod() != HTTPRequest::GET) {
         return WriteErrorResponse(req, "METHOD_NOT_ALLOWED", "Only GET method is allowed", HTTP_BAD_METHOD);
     }
     
@@ -606,7 +622,7 @@ bool rest_exchange_rate_measured(const std::any& context, HTTPRequest* req, cons
         }
     }
     
-    std::string fiat_currency = g_measurement_system.GetCorrespondingFiatCurrency(o_currency);
+    std::string fiat_currency = OMeasurement::g_measurement_system.GetCorrespondingFiatCurrency(o_currency);
     if (fiat_currency.empty()) {
         return WriteErrorResponse(req, "INVALID_CURRENCY", "Invalid O currency code");
     }
@@ -615,9 +631,9 @@ bool rest_exchange_rate_measured(const std::any& context, HTTPRequest* req, cons
     int64_t current_time = GetTime();
     int64_t start_time = current_time - (days * 24 * 3600);
     std::vector<OMeasurement::ExchangeRateMeasurement> measurements = 
-        g_measurement_system.GetExchangeRatesInRange(o_currency, fiat_currency, start_time, current_time);
+        OMeasurement::g_measurement_system.GetExchangeRatesInRange(o_currency, fiat_currency, start_time, current_time);
     
-    double theoretical_rate = g_measurement_system.GetTheoreticalExchangeRate(o_currency);
+    double theoretical_rate = OMeasurement::g_measurement_system.GetTheoreticalExchangeRate(o_currency);
     
     UniValue measured_rates(UniValue::VARR);
     double sum_rates = 0.0;
@@ -656,7 +672,7 @@ bool rest_exchange_rate_measured(const std::any& context, HTTPRequest* req, cons
     }
     
     double avg_measured = valid_count > 0 ? sum_rates / valid_count : 0.0;
-    double volatility = g_measurement_system.CalculateVolatility(OMeasurement::MeasurementType::EXCHANGE_RATE, o_currency, days);
+    double volatility = OMeasurement::g_measurement_system.CalculateVolatility(OMeasurement::MeasurementType::EXCHANGE_RATE, o_currency, days);
     
     UniValue response(UniValue::VOBJ);
     response.pushKV("o_currency", o_currency);
@@ -672,7 +688,7 @@ bool rest_exchange_rate_measured(const std::any& context, HTTPRequest* req, cons
 
 bool rest_exchange_rate_historical(const std::any& context, HTTPRequest* req, const std::string& strReq)
 {
-    if (req->GetRequestMethod() != "GET") {
+    if (req->GetRequestMethod() != HTTPRequest::GET) {
         return WriteErrorResponse(req, "METHOD_NOT_ALLOWED", "Only GET method is allowed", HTTP_BAD_METHOD);
     }
     
@@ -709,13 +725,13 @@ bool rest_exchange_rate_historical(const std::any& context, HTTPRequest* req, co
         return WriteErrorResponse(req, "MISSING_PARAMETERS", "start_date and end_date are required");
     }
     
-    std::string fiat_currency = g_measurement_system.GetCorrespondingFiatCurrency(o_currency);
+    std::string fiat_currency = OMeasurement::g_measurement_system.GetCorrespondingFiatCurrency(o_currency);
     if (fiat_currency.empty()) {
         return WriteErrorResponse(req, "INVALID_CURRENCY", "Invalid O currency code");
     }
     
     // Get daily averages in range
-    auto daily_averages = g_measurement_system.GetDailyAveragesInRange(o_currency, start_date, end_date);
+    auto daily_averages = OMeasurement::g_measurement_system.GetDailyAveragesInRange(o_currency, start_date, end_date);
     
     UniValue data(UniValue::VARR);
     for (const auto& avg : daily_averages) {
@@ -741,7 +757,7 @@ bool rest_exchange_rate_historical(const std::any& context, HTTPRequest* req, co
 
 bool rest_map_country(const std::any& context, HTTPRequest* req, const std::string& strReq)
 {
-    if (req->GetRequestMethod() != "GET") {
+    if (req->GetRequestMethod() != HTTPRequest::GET) {
         return WriteErrorResponse(req, "METHOD_NOT_ALLOWED", "Only GET method is allowed", HTTP_BAD_METHOD);
     }
     
@@ -764,20 +780,20 @@ bool rest_map_country(const std::any& context, HTTPRequest* req, const std::stri
     }
     
     // Get water price data
-    auto avg_water = g_measurement_system.GetAverageWaterPriceWithConfidence(currency, 30);
+    auto avg_water = OMeasurement::g_measurement_system.GetAverageWaterPriceWithConfidence(currency, 30);
     if (!avg_water.has_value()) {
         return WriteErrorResponse(req, "NO_DATA", "No water price data available for this country");
     }
     
     // Get exchange rate data
-    auto avg_exchange = g_measurement_system.GetAverageExchangeRateWithConfidence(o_currency, currency, 7);
+    auto avg_exchange = OMeasurement::g_measurement_system.GetAverageExchangeRateWithConfidence(o_currency, currency, 7);
     if (!avg_exchange.has_value()) {
         return WriteErrorResponse(req, "NO_DATA", "No exchange rate data available for this country");
     }
     
-    double deviation = g_measurement_system.CalculateStabilityDeviation(o_currency, avg_exchange->value);
+    double deviation = OMeasurement::g_measurement_system.CalculateStabilityDeviation(o_currency, avg_exchange->value);
     bool is_stable = deviation <= 0.10;
-    double volatility = g_measurement_system.CalculateVolatility(OMeasurement::MeasurementType::EXCHANGE_RATE, o_currency, 7);
+    double volatility = OMeasurement::g_measurement_system.CalculateVolatility(OMeasurement::MeasurementType::EXCHANGE_RATE, o_currency, 7);
     
     UniValue response(UniValue::VOBJ);
     response.pushKV("country_code", country_code);
@@ -821,7 +837,7 @@ bool rest_map_country(const std::any& context, HTTPRequest* req, const std::stri
 
 bool rest_wallet_balance(const std::any& context, HTTPRequest* req, const std::string& strReq)
 {
-    if (req->GetRequestMethod() != "GET") {
+    if (req->GetRequestMethod() != HTTPRequest::GET) {
         return WriteErrorResponse(req, "METHOD_NOT_ALLOWED", "Only GET method is allowed", HTTP_BAD_METHOD);
     }
     
@@ -849,7 +865,7 @@ bool rest_wallet_balance(const std::any& context, HTTPRequest* req, const std::s
 
 bool rest_wallet_transactions(const std::any& context, HTTPRequest* req, const std::string& strReq)
 {
-    if (req->GetRequestMethod() != "GET") {
+    if (req->GetRequestMethod() != HTTPRequest::GET) {
         return WriteErrorResponse(req, "METHOD_NOT_ALLOWED", "Only GET method is allowed", HTTP_BAD_METHOD);
     }
     
@@ -881,7 +897,7 @@ bool rest_wallet_transactions(const std::any& context, HTTPRequest* req, const s
 
 bool rest_wallet_send(const std::any& context, HTTPRequest* req, const std::string& strReq)
 {
-    if (req->GetRequestMethod() != "POST") {
+    if (req->GetRequestMethod() != HTTPRequest::POST) {
         return WriteErrorResponse(req, "METHOD_NOT_ALLOWED", "Only POST method is allowed", HTTP_BAD_METHOD);
     }
     
@@ -895,7 +911,7 @@ bool rest_wallet_send(const std::any& context, HTTPRequest* req, const std::stri
 
 bool rest_measurements_submit_water(const std::any& context, HTTPRequest* req, const std::string& strReq)
 {
-    if (req->GetRequestMethod() != "POST") {
+    if (req->GetRequestMethod() != HTTPRequest::POST) {
         return WriteErrorResponse(req, "METHOD_NOT_ALLOWED", "Only POST method is allowed", HTTP_BAD_METHOD);
     }
     
@@ -916,16 +932,19 @@ bool rest_measurements_submit_water(const std::any& context, HTTPRequest* req, c
     std::string source_type = json["source_type"].get_str();
     std::string publickey_str = json["publickey"].get_str();
     
-    UniValue invite_id_uni(UniValue::VSTR);
-    invite_id_uni.setStr(invite_id_str);
-    uint256 invite_id = ParseHashV(invite_id_uni, "invite_id");
+    uint256 invite_id;
+    if (invite_id_str.length() != 64 || !IsHex(invite_id_str)) {
+        return WriteErrorResponse(req, "INVALID_INVITE_ID", "Invalid invite ID format (expected 64 hex characters)");
+    }
+    std::vector<unsigned char> invite_id_bytes = ParseHex(invite_id_str);
+    invite_id = uint256(invite_id_bytes);
     
     // Validate invite
-    if (!g_measurement_db) {
+    if (!OMeasurement::g_measurement_db) {
         return WriteErrorResponse(req, "DATABASE_ERROR", "Measurement database not initialized", HTTP_INTERNAL_SERVER_ERROR);
     }
     
-    auto invite_opt = g_measurement_db->ReadInvite(invite_id);
+    auto invite_opt = OMeasurement::g_measurement_db->ReadInvite(invite_id);
     if (!invite_opt.has_value() || !invite_opt->IsValid(GetTime())) {
         return WriteErrorResponse(req, "INVALID_INVITE", "Invalid or expired invitation");
     }
@@ -972,7 +991,7 @@ bool rest_measurements_submit_water(const std::any& context, HTTPRequest* req, c
 
 bool rest_measurements_submit_exchange(const std::any& context, HTTPRequest* req, const std::string& strReq)
 {
-    if (req->GetRequestMethod() != "POST") {
+    if (req->GetRequestMethod() != HTTPRequest::POST) {
         return WriteErrorResponse(req, "METHOD_NOT_ALLOWED", "Only POST method is allowed", HTTP_BAD_METHOD);
     }
     
@@ -993,16 +1012,19 @@ bool rest_measurements_submit_exchange(const std::any& context, HTTPRequest* req
     double exchange_rate = json["exchange_rate"].get_real();
     std::string publickey_str = json["publickey"].get_str();
     
-    UniValue invite_id_uni(UniValue::VSTR);
-    invite_id_uni.setStr(invite_id_str);
-    uint256 invite_id = ParseHashV(invite_id_uni, "invite_id");
+    uint256 invite_id;
+    if (invite_id_str.length() != 64 || !IsHex(invite_id_str)) {
+        return WriteErrorResponse(req, "INVALID_INVITE_ID", "Invalid invite ID format (expected 64 hex characters)");
+    }
+    std::vector<unsigned char> invite_id_bytes = ParseHex(invite_id_str);
+    invite_id = uint256(invite_id_bytes);
     
     // Validate invite
-    if (!g_measurement_db) {
+    if (!OMeasurement::g_measurement_db) {
         return WriteErrorResponse(req, "DATABASE_ERROR", "Measurement database not initialized", HTTP_INTERNAL_SERVER_ERROR);
     }
     
-    auto invite_opt = g_measurement_db->ReadInvite(invite_id);
+    auto invite_opt = OMeasurement::g_measurement_db->ReadInvite(invite_id);
     if (!invite_opt.has_value() || !invite_opt->IsValid(GetTime())) {
         return WriteErrorResponse(req, "INVALID_INVITE", "Invalid or expired invitation");
     }
@@ -1031,7 +1053,7 @@ bool rest_measurements_submit_exchange(const std::any& context, HTTPRequest* req
 
 bool rest_notifications_measurements(const std::any& context, HTTPRequest* req, const std::string& strReq)
 {
-    if (req->GetRequestMethod() != "GET") {
+    if (req->GetRequestMethod() != HTTPRequest::GET) {
         return WriteErrorResponse(req, "METHOD_NOT_ALLOWED", "Only GET method is allowed", HTTP_BAD_METHOD);
     }
     
@@ -1040,9 +1062,13 @@ bool rest_notifications_measurements(const std::any& context, HTTPRequest* req, 
         return WriteErrorResponse(req, "INVALID_PARAMETERS", "Public key not found in URL path");
     }
     
-    CPubKey publickey;
-    if (!publickey.SetHex(publickey_str)) {
-        return WriteErrorResponse(req, "INVALID_PUBLICKEY", "Invalid public key format");
+    std::vector<unsigned char> pubkey_bytes = ParseHex(publickey_str);
+    if (pubkey_bytes.size() != 33 && pubkey_bytes.size() != 65) {
+        return WriteErrorResponse(req, "INVALID_PUBLICKEY", "Invalid public key format (expected 33 or 65 bytes)");
+    }
+    CPubKey publickey(pubkey_bytes.begin(), pubkey_bytes.end());
+    if (!publickey.IsFullyValid()) {
+        return WriteErrorResponse(req, "INVALID_PUBLICKEY", "Invalid public key");
     }
     
     // TODO: Query database for measurements by this user
@@ -1063,7 +1089,7 @@ bool rest_notifications_measurements(const std::any& context, HTTPRequest* req, 
 
 bool rest_info_currencies(const std::any& context, HTTPRequest* req, const std::string& strReq)
 {
-    if (req->GetRequestMethod() != "GET") {
+    if (req->GetRequestMethod() != HTTPRequest::GET) {
         return WriteErrorResponse(req, "METHOD_NOT_ALLOWED", "Only GET method is allowed", HTTP_BAD_METHOD);
     }
     
@@ -1090,7 +1116,7 @@ bool rest_info_currencies(const std::any& context, HTTPRequest* req, const std::
 
 bool rest_info_stability_status(const std::any& context, HTTPRequest* req, const std::string& strReq)
 {
-    if (req->GetRequestMethod() != "GET") {
+    if (req->GetRequestMethod() != HTTPRequest::GET) {
         return WriteErrorResponse(req, "METHOD_NOT_ALLOWED", "Only GET method is allowed", HTTP_BAD_METHOD);
     }
     
@@ -1105,10 +1131,10 @@ bool rest_info_stability_status(const std::any& context, HTTPRequest* req, const
         if (o_currency.empty()) {
             continue;
         }
-        auto avg = g_measurement_system.GetAverageExchangeRateWithConfidence(o_currency, currency, 7);
+        auto avg = OMeasurement::g_measurement_system.GetAverageExchangeRateWithConfidence(o_currency, currency, 7);
         if (avg.has_value()) {
             total++;
-            double deviation = g_measurement_system.CalculateStabilityDeviation(o_currency, avg->value);
+            double deviation = OMeasurement::g_measurement_system.CalculateStabilityDeviation(o_currency, avg->value);
             if (deviation <= 0.10) {
                 stable++;
             } else {

@@ -6,6 +6,9 @@
 #define BITCOIN_REST_O_MOBILE_API_H
 
 #include <httpserver.h>
+#include <rpc/protocol.h>
+#include <univalue.h>
+#include <any>
 #include <string>
 
 /**
@@ -47,14 +50,6 @@ bool rest_notifications_measurements(const std::any& context, HTTPRequest* req, 
 // General Information Endpoints
 bool rest_info_currencies(const std::any& context, HTTPRequest* req, const std::string& strReq);
 bool rest_info_stability_status(const std::any& context, HTTPRequest* req, const std::string& strReq);
-
-// Helper functions
-bool ParseJSONRequest(HTTPRequest* req, UniValue& json);
-bool WriteJSONResponse(HTTPRequest* req, const UniValue& json, enum HTTPStatusCode status = HTTP_OK);
-bool WriteErrorResponse(HTTPRequest* req, const std::string& error_code, const std::string& message, enum HTTPStatusCode status = HTTP_BAD_REQUEST);
-std::string ExtractPublicKeyFromPath(const std::string& path);
-std::string ExtractCountryCodeFromPath(const std::string& path);
-std::string ExtractOCurrencyFromPath(const std::string& path);
 
 #endif // BITCOIN_REST_O_MOBILE_API_H
 

@@ -112,6 +112,11 @@ static RPCHelpMan submituserverificationtx()
             std::shared_ptr<CWallet> const pwallet = GetWalletForJSONRPCRequest(request);
             if (!pwallet) throw JSONRPCError(RPC_WALLET_NOT_FOUND, "Wallet not found");
             
+            LOCK(pwallet->cs_wallet);
+            
+            // Ensure wallet is unlocked for signing
+            EnsureWalletIsUnlocked(*pwallet);
+            
             // Parse parameters
             CUserVerificationData data;
             data.user_id = request.params[0].get_str();
@@ -121,20 +126,72 @@ static RPCHelpMan submituserverificationtx()
             data.verification_data = request.params[4].get_str();
             data.provider_sig = ParseHex(request.params[5].get_str());
             data.timestamp = GetTime();
-            data.expiration = request.params[6].isNull() ? 0 : request.params[6].getInt<int64_t>();
+            data.expiration = (request.params.size() > 6 && !request.params[6].isNull()) ? request.params[6].getInt<int64_t>() : 0;
             
             // Get O pubkey from wallet
+            CPubKey o_pubkey;
+            std::optional<CTxDestination> dest_for_signing;
+            std::optional<CKeyID> keyid_for_signing;
+            
             if (request.params.size() > 7 && !request.params[7].isNull()) {
-                // TODO: Parse provided pubkey
-                throw JSONRPCError(RPC_MISC_ERROR, "Custom pubkey not yet supported");
+                // Parse provided pubkey if given
+                std::vector<unsigned char> pubkey_bytes = ParseHex(request.params[7].get_str());
+                if (pubkey_bytes.size() != 33 && pubkey_bytes.size() != 65) {
+                    throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid pubkey format (expected 33 or 65 bytes)");
+                }
+                o_pubkey = CPubKey(pubkey_bytes.begin(), pubkey_bytes.end());
+                if (!o_pubkey.IsValid()) {
+                    throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid pubkey");
+                }
+                // If pubkey provided, don't sign (user must sign externally)
+            } else {
+                // Get pubkey from wallet
+                util::Result<CTxDestination> dest_result = pwallet->GetNewDestination(OutputType::LEGACY, "user_verification");
+                if (!dest_result) {
+                    throw JSONRPCError(RPC_WALLET_ERROR, "Failed to get wallet address: " + util::ErrorString(dest_result).original);
+                }
+                
+                CTxDestination dest = *dest_result;
+                dest_for_signing = dest;
+                
+                const PKHash* pkhash = std::get_if<PKHash>(&dest);
+                if (!pkhash) {
+                    throw JSONRPCError(RPC_WALLET_ERROR, "Address is not a valid public key hash");
+                }
+                
+                CKeyID keyid = ToKeyID(*pkhash);
+                keyid_for_signing = keyid;
+                
+                // Get public key from wallet
+                CScript script_pubkey = GetScriptForDestination(dest);
+                std::unique_ptr<SigningProvider> provider = pwallet->GetSolvingProvider(script_pubkey);
+                if (!provider || !provider->GetPubKey(keyid, o_pubkey)) {
+                    throw JSONRPCError(RPC_WALLET_ERROR, "Failed to get public key from wallet");
+                }
             }
             
-            // TODO: Get pubkey from wallet
-            // For now, create empty pubkey
-            data.o_pubkey = CPubKey();
+            data.o_pubkey = o_pubkey;
             
-            // TODO: Sign with user's private key
-            data.user_sig = {};
+            // Sign with user's private key (if pubkey was from wallet)
+            if (keyid_for_signing.has_value() && dest_for_signing.has_value()) {
+                CScript script_pubkey = GetScriptForDestination(*dest_for_signing);
+                std::unique_ptr<SigningProvider> provider = pwallet->GetSolvingProvider(script_pubkey);
+                if (provider) {
+                    CKey private_key;
+                    if (provider->GetKey(*keyid_for_signing, private_key)) {
+                        uint256 hash = data.GetHash();
+                        std::vector<unsigned char> signature_vec;
+                        if (private_key.SignCompact(hash, signature_vec)) {
+                            data.user_sig = signature_vec;
+                        }
+                    }
+                }
+            }
+            
+            // If no signature was created, use empty signature
+            if (data.user_sig.empty()) {
+                data.user_sig = {};
+            }
             
             // Validate data
             if (!data.IsValid()) {

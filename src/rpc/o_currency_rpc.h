@@ -4,6 +4,7 @@
 #include <univalue.h>
 
 class CRPCTable;
+class JSONRPCRequest;
 
 /**
  * Register O blockchain currency RPC commands
