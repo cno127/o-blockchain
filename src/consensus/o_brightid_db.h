@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef BITCOIN_CONSENSUS_O_BRIGHTID_DB_H
-#define BITCOIN_CONSENSUS_O_BRIGHTID_DB_H
+#ifndef BITCOIN_CONSENSUS_O_IDENTITY_DB_H
+#define BITCOIN_CONSENSUS_O_IDENTITY_DB_H
 
 #include <dbwrapper.h>
 #include <consensus/brightid_integration.h>
@@ -27,46 +27,49 @@ static constexpr uint8_t DB_ANONYMOUS_REP = 'r';           // Anonymous ID -> Re
 static constexpr uint8_t DB_BRIGHTID_STATS = 's';          // Statistics
 static constexpr uint8_t DB_BRIGHTID_VERSION = 'v';        // Database version
 
-/** BrightID User Database - Persistent storage for Proof of Personhood data */
-class CBrightIDUserDB {
+/** Identity User Database - Persistent storage for Proof of Personhood data
+ *  Supports multiple identity providers: BrightID, KYC, WorldCoin, Idena, etc.
+ *  Note: Legacy name "BrightID" kept in some internal fields for backward compatibility
+ */
+class CIdentityUserDB {
 private:
     std::unique_ptr<CDBWrapper> m_db;
     mutable RecursiveMutex m_db_mutex;
     
 public:
-    explicit CBrightIDUserDB(size_t cache_size, bool memory_only = false, bool wipe_data = false);
-    ~CBrightIDUserDB();
+    explicit CIdentityUserDB(size_t cache_size, bool memory_only = false, bool wipe_data = false);
+    ~CIdentityUserDB();
     
     // ===== User Operations =====
     
     /** Write user data to database */
-    bool WriteUser(const std::string& brightid_address, const BrightIDUser& user);
+    bool WriteUser(const std::string& provider_address, const VerifiedUser& user);
     
     /** Read user data from database */
-    std::optional<BrightIDUser> ReadUser(const std::string& brightid_address) const;
+    std::optional<VerifiedUser> ReadUser(const std::string& provider_address) const;
     
     /** Check if user exists in database */
-    bool HasUser(const std::string& brightid_address) const;
+    bool HasUser(const std::string& provider_address) const;
     
     /** Erase user from database */
-    bool EraseUser(const std::string& brightid_address);
+    bool EraseUser(const std::string& provider_address);
     
     /** Update user status */
-    bool UpdateUserStatus(const std::string& brightid_address, BrightIDStatus status);
+    bool UpdateUserStatus(const std::string& provider_address, BrightIDStatus status);
     
     /** Update user trust score */
-    bool UpdateTrustScore(const std::string& brightid_address, double trust_score);
+    bool UpdateTrustScore(const std::string& provider_address, double trust_score);
     
     // ===== Address Mapping Operations =====
     
-    /** Link BrightID address to O address */
-    bool LinkAddresses(const std::string& brightid_address, const std::string& o_address);
+    /** Link provider address to O address */
+    bool LinkAddresses(const std::string& provider_address, const std::string& o_address);
     
-    /** Unlink BrightID address from O address */
-    bool UnlinkAddresses(const std::string& brightid_address);
+    /** Unlink provider address from O address */
+    bool UnlinkAddresses(const std::string& provider_address);
     
-    /** Get O address for BrightID */
-    std::optional<std::string> GetOAddress(const std::string& brightid_address) const;
+    /** Get O address for provider address */
+    std::optional<std::string> GetOAddress(const std::string& provider_address) const;
     
     /** Get BrightID address for O address */
     std::optional<std::string> GetBrightIDAddress(const std::string& o_address) const;
@@ -74,10 +77,10 @@ public:
     // ===== Anonymous ID Operations =====
     
     /** Store anonymous ID mapping */
-    bool WriteAnonymousID(const std::string& brightid_address, const std::string& anonymous_id);
+    bool WriteAnonymousID(const std::string& provider_address, const std::string& anonymous_id);
     
-    /** Get anonymous ID for BrightID address */
-    std::optional<std::string> GetAnonymousID(const std::string& brightid_address) const;
+    /** Get anonymous ID for provider address */
+    std::optional<std::string> GetAnonymousID(const std::string& provider_address) const;
     
     /** Write anonymous reputation */
     bool WriteAnonymousReputation(const std::string& anonymous_id, double reputation);
@@ -86,27 +89,27 @@ public:
     std::optional<double> GetAnonymousReputation(const std::string& anonymous_id) const;
     
     /** Erase anonymous data */
-    bool EraseAnonymousData(const std::string& brightid_address);
+    bool EraseAnonymousData(const std::string& provider_address);
     
     // ===== Batch Operations =====
     
     /** Get all verified users */
-    std::vector<BrightIDUser> GetVerifiedUsers() const;
+    std::vector<VerifiedUser> GetVerifiedUsers() const;
     
     /** Get all active users */
-    std::vector<BrightIDUser> GetActiveUsers() const;
+    std::vector<VerifiedUser> GetActiveUsers() const;
     
     /** Get users by status */
-    std::vector<BrightIDUser> GetUsersByStatus(BrightIDStatus status) const;
+    std::vector<VerifiedUser> GetUsersByStatus(BrightIDStatus status) const;
     
     /** Get all users (for iteration/migration) */
-    std::vector<std::pair<std::string, BrightIDUser>> GetAllUsers() const;
+    std::vector<std::pair<std::string, VerifiedUser>> GetAllUsers() const;
     
     /** Batch write multiple users */
-    bool BatchWriteUsers(const std::vector<std::pair<std::string, BrightIDUser>>& batch);
+    bool BatchWriteUsers(const std::vector<std::pair<std::string, VerifiedUser>>& batch);
     
     /** Batch erase multiple users */
-    bool BatchEraseUsers(const std::vector<std::string>& brightid_addresses);
+    bool BatchEraseUsers(const std::vector<std::string>& provider_addresses);
     
     // ===== Query Operations =====
     
@@ -124,6 +127,9 @@ public:
     
     /** Find users by birth currency (for stabilization rewards) */
     std::vector<CPubKey> FindUsersByBirthCurrency(const std::string& birth_currency) const;
+    
+    /** Get birth currency for a user by their public key (for measurement rewards) */
+    std::optional<std::string> GetBirthCurrencyByPubKey(const CPubKey& pubkey) const;
     
     // ===== Statistics =====
     
@@ -172,7 +178,7 @@ public:
 };
 
 /** Global BrightID user database instance */
-extern std::unique_ptr<CBrightIDUserDB> g_brightid_db;
+extern std::unique_ptr<CIdentityUserDB> g_brightid_db;
 
 } // namespace OConsensus
 

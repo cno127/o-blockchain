@@ -6,6 +6,7 @@
 
 #include <chain.h>
 #include <consensus/o_brightid_db.h>
+#include <consensus/identity_provider_registry.h>
 #include <hash.h>
 #include <logging.h>
 #include <measurement/o_measurement_db.h>
@@ -308,47 +309,57 @@ bool ProcessExchangeRateMeasurement(
 
 bool ValidateProviderSignature(const OTransactions::CUserVerificationData& data) {
     if (data.provider_sig.empty()) {
+        LogPrintf("O Validation: Empty provider signature for provider %s\n",
+                 data.identity_provider.c_str());
         return false;
     }
     
-    // Validate based on identity provider type
-    if (data.IsBrightID()) {
-        // TODO: Validate against BrightID's public key
-        // For now, basic validation
-        return data.provider_sig.size() >= 64;
-    }
-    else if (data.IsKYC()) {
-        // TODO: Validate against KYC provider's public key
-        // Each country might have different KYC providers
-        // Example: kyc_usa, kyc_fra, kyc_mex, etc.
-        return data.provider_sig.size() >= 64;
-    }
-    else if (data.identity_provider == "worldcoin") {
-        // TODO: Validate against WorldCoin's public key
-        return data.provider_sig.size() >= 64;
-    }
-    else if (data.identity_provider == "idena") {
-        // TODO: Validate against Idena's verification
-        return data.provider_sig.size() >= 64;
+    // Check if provider is whitelisted (if whitelist is enabled)
+    if (!g_identity_provider_registry.IsProviderWhitelisted(data.identity_provider)) {
+        LogPrintf("O Validation: Provider %s is not whitelisted\n",
+                 data.identity_provider.c_str());
+        return false;
     }
     
-    // Unknown provider - for now, accept if signature exists
-    // In production, should maintain a whitelist of approved providers
-    return data.provider_sig.size() >= 64;
+    // Get provider's public key from registry
+    auto provider_pubkey = g_identity_provider_registry.GetProviderPublicKey(data.identity_provider);
+    if (!provider_pubkey.has_value()) {
+        LogPrintf("O Validation: Provider %s not registered or inactive\n",
+                 data.identity_provider.c_str());
+        return false;
+    }
+    
+    // Verify provider signature using the hash of verification data
+    uint256 hash = data.GetHash();
+    bool valid = provider_pubkey->Verify(hash, data.provider_sig);
+    
+    if (!valid) {
+        LogPrintf("O Validation: Provider signature verification failed for %s\n",
+                 data.identity_provider.c_str());
+    }
+    
+    return valid;
 }
 
 bool ValidateUserSignature(const OTransactions::CUserVerificationData& data) {
     if (data.user_sig.empty() || !data.o_pubkey.IsValid()) {
+        LogPrintf("O Validation: Invalid user signature data - empty sig or invalid pubkey\n");
         return false;
     }
     
     // Verify that user signed the hash of the verification data
-    // uint256 hash = data.GetHash();
+    // This proves the user owns the o_pubkey they're linking to their identity
+    uint256 hash = data.GetHash();
     
-    // TODO: Implement proper signature verification
-    // Verify that user_sig is a valid signature of data.GetHash() by o_pubkey
-    // For now, basic validation
-    return data.user_sig.size() >= 64;  // Minimum signature size
+    // Use CPubKey::Verify to cryptographically verify the ECDSA signature
+    bool valid = data.o_pubkey.Verify(hash, data.user_sig);
+    
+    if (!valid) {
+        LogPrintf("O Validation: User signature verification failed for pubkey %s\n",
+                 HexStr(data.o_pubkey).substr(0, 16).c_str());
+    }
+    
+    return valid;
 }
 
 bool ValidateMeasurementInvitation(const uint256& invite_id, const CPubKey& measurer) {

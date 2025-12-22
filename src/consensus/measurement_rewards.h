@@ -20,18 +20,19 @@ struct MeasurementRewardTransaction {
     uint256 measurement_id;
     CPubKey recipient;
     CAmount reward_amount;
+    std::string reward_currency;       // O currency code (e.g., "OUSD", "OEUR") - submitter's birth currency
     MeasurementType measurement_type;
     int64_t timestamp;
     int block_height;
     
     MeasurementRewardTransaction()
-        : measurement_id(), recipient(), reward_amount(0), 
+        : measurement_id(), recipient(), reward_amount(0), reward_currency("OUSD"),
           measurement_type(MeasurementType::WATER_PRICE), timestamp(0), block_height(0) {}
     
     SERIALIZE_METHODS(MeasurementRewardTransaction, obj) {
         uint8_t type_val = static_cast<uint8_t>(obj.measurement_type);
-        READWRITE(obj.measurement_id, obj.recipient, obj.reward_amount, type_val,
-                  obj.timestamp, obj.block_height);
+        READWRITE(obj.measurement_id, obj.recipient, obj.reward_amount, obj.reward_currency,
+                  type_val, obj.timestamp, obj.block_height);
         if (ser_action.ForRead()) obj.measurement_type = static_cast<MeasurementType>(type_val);
     }
     

@@ -7,6 +7,7 @@
 #include <consensus/currency_disappearance_handling.h>
 #include <consensus/o_brightid_db.h>
 #include <measurement/measurement_system.h>
+#include <addresstype.h>
 #include <logging.h>
 #include <random.h>
 #include <util/strencodings.h>
@@ -257,9 +258,17 @@ std::vector<CTransaction> StabilizationMining::CreateStabilizationTransactions(
         
         CMutableTransaction mtx;
         mtx.version = 2;
-        for ([[maybe_unused]] const auto& recipient : recipients) {
+        
+        // Create stabilization reward transaction
+        // NOTE: Currently using legacy CTxOut, but currency field indicates this reward
+        // should be paid in the unstable currency (e.g., stabilizing OEUR → pay in OEUR).
+        // When multi-currency transactions are fully integrated, this should use
+        // CMultiCurrencyTxOut with the appropriate currency_id.
+        for (const auto& recipient : recipients) {
+            CScript reward_script = GetScriptForDestination(PKHash(recipient));
             CTxOut output;
             output.nValue = amount_per_recipient;
+            output.scriptPubKey = reward_script;
             mtx.vout.push_back(output);
         }
         
@@ -268,13 +277,17 @@ std::vector<CTransaction> StabilizationMining::CreateStabilizationTransactions(
         
         StabilizationTransaction stab_record;
         stab_record.tx_id = tx.GetHash();
-        stab_record.unstable_currency = currency;
+        stab_record.unstable_currency = currency;  // This is the O currency being stabilized (e.g., "OEUR")
         stab_record.coins_created = amount_per_recipient * recipients.size();
         stab_record.recipients = recipients;
         stab_record.block_height = height;
         stab_record.timestamp = GetTime();
         stab_record.deviation_ratio = info->stability_ratio;
         RecordStabilizationTransaction(stab_record);
+        
+        LogPrintf("O Stabilization: Created stabilization transaction - "
+                  "Currency: %s, Amount per recipient: %d, Recipients: %d\n",
+                  currency.c_str(), amount_per_recipient, static_cast<int>(recipients.size()));
     }
     
     return stab_txs;

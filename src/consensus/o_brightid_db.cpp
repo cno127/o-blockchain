@@ -7,14 +7,17 @@
 #include <logging.h>
 #include <util/fs.h>
 #include <util/time.h>
+#include <util/strencodings.h>
 #include <streams.h>
 
 namespace OConsensus {
 
 // Global instance (initialized in init.cpp)
-std::unique_ptr<CBrightIDUserDB> g_brightid_db;
+// Legacy name kept for backward compatibility during transition
+std::unique_ptr<CIdentityUserDB> g_brightid_db;
+std::unique_ptr<CIdentityUserDB> g_identity_db;  // New name
 
-CBrightIDUserDB::CBrightIDUserDB(size_t cache_size, bool memory_only, bool wipe_data)
+CIdentityUserDB::CIdentityUserDB(size_t cache_size, bool memory_only, bool wipe_data)
 {
     DBParams db_params;
     db_params.path = gArgs.GetDataDirNet() / "brightid_users";
@@ -33,173 +36,173 @@ CBrightIDUserDB::CBrightIDUserDB(size_t cache_size, bool memory_only, bool wipe_
     }
 }
 
-CBrightIDUserDB::~CBrightIDUserDB() = default;
+CIdentityUserDB::~CIdentityUserDB() = default;
 
 // ===== User Operations =====
 
-bool CBrightIDUserDB::WriteUser(const std::string& brightid_address, const BrightIDUser& user)
+bool CIdentityUserDB::WriteUser(const std::string& provider_address, const VerifiedUser& user)
 {
     LOCK(m_db_mutex);
     
     CDBBatch batch(*m_db);
-    batch.Write(std::make_pair(DB_BRIGHTID_USER, brightid_address), user);
+    batch.Write(std::make_pair(DB_BRIGHTID_USER, provider_address), user);
     
     bool success = m_db->WriteBatch(batch, true);
     
     if (success) {
-        LogDebug(BCLog::NET, "O BrightID DB: Wrote user %s (status=%d, trust=%.2f)\n",
-                 brightid_address.substr(0, 16), static_cast<int>(user.status), user.trust_score);
+        LogDebug(BCLog::NET, "O Identity DB: Wrote user %s (status=%d, trust=%.2f)\n",
+                 provider_address.substr(0, 16), static_cast<int>(user.status), user.trust_score);
     } else {
-        LogPrintf("O BrightID DB: Failed to write user %s\n", brightid_address.substr(0, 16));
+        LogPrintf("O Identity DB: Failed to write user %s\n", provider_address.substr(0, 16));
     }
     
     return success;
 }
 
-std::optional<BrightIDUser> CBrightIDUserDB::ReadUser(const std::string& brightid_address) const
+std::optional<VerifiedUser> CIdentityUserDB::ReadUser(const std::string& provider_address) const
 {
     LOCK(m_db_mutex);
     
-    BrightIDUser user;
-    if (m_db->Read(std::make_pair(DB_BRIGHTID_USER, brightid_address), user)) {
+    VerifiedUser user;
+    if (m_db->Read(std::make_pair(DB_BRIGHTID_USER, provider_address), user)) {
         return user;
     }
     
     return std::nullopt;
 }
 
-bool CBrightIDUserDB::HasUser(const std::string& brightid_address) const
+bool CIdentityUserDB::HasUser(const std::string& provider_address) const
 {
     LOCK(m_db_mutex);
-    return m_db->Exists(std::make_pair(DB_BRIGHTID_USER, brightid_address));
+    return m_db->Exists(std::make_pair(DB_BRIGHTID_USER, provider_address));
 }
 
-bool CBrightIDUserDB::EraseUser(const std::string& brightid_address)
+bool CIdentityUserDB::EraseUser(const std::string& provider_address)
 {
     LOCK(m_db_mutex);
     
     CDBBatch batch(*m_db);
     
     // Erase user data
-    batch.Erase(std::make_pair(DB_BRIGHTID_USER, brightid_address));
+    batch.Erase(std::make_pair(DB_BRIGHTID_USER, provider_address));
     
     // Also erase address mappings
-    auto o_addr = GetOAddress(brightid_address);
+    auto o_addr = GetOAddress(provider_address);
     if (o_addr.has_value()) {
-        batch.Erase(std::make_pair(DB_BRIGHTID_TO_O, brightid_address));
+        batch.Erase(std::make_pair(DB_BRIGHTID_TO_O, provider_address));
         batch.Erase(std::make_pair(DB_O_TO_BRIGHTID, o_addr.value()));
     }
     
     // Erase anonymous data
-    auto anon_id = GetAnonymousID(brightid_address);
+    auto anon_id = GetAnonymousID(provider_address);
     if (anon_id.has_value()) {
-        batch.Erase(std::make_pair(DB_ANONYMOUS_ID, brightid_address));
+        batch.Erase(std::make_pair(DB_ANONYMOUS_ID, provider_address));
         batch.Erase(std::make_pair(DB_ANONYMOUS_REP, anon_id.value()));
     }
     
     bool success = m_db->WriteBatch(batch, true);
     
     if (success) {
-        LogDebug(BCLog::NET, "O BrightID DB: Erased user %s\n", brightid_address.substr(0, 16));
+        LogDebug(BCLog::NET, "O Identity DB: Erased user %s\n", provider_address.substr(0, 16));
     }
     
     return success;
 }
 
-bool CBrightIDUserDB::UpdateUserStatus(const std::string& brightid_address, BrightIDStatus status)
+bool CIdentityUserDB::UpdateUserStatus(const std::string& provider_address, BrightIDStatus status)
 {
     LOCK(m_db_mutex);
     
-    auto user_opt = ReadUser(brightid_address);
+    auto user_opt = ReadUser(provider_address);
     if (!user_opt.has_value()) {
         return false;
     }
     
-    BrightIDUser user = user_opt.value();
+    VerifiedUser user = user_opt.value();
     user.status = status;
     
-    return WriteUser(brightid_address, user);
+    return WriteUser(provider_address, user);
 }
 
-bool CBrightIDUserDB::UpdateTrustScore(const std::string& brightid_address, double trust_score)
+bool CIdentityUserDB::UpdateTrustScore(const std::string& provider_address, double trust_score)
 {
     LOCK(m_db_mutex);
     
-    auto user_opt = ReadUser(brightid_address);
+    auto user_opt = ReadUser(provider_address);
     if (!user_opt.has_value()) {
         return false;
     }
     
-    BrightIDUser user = user_opt.value();
+    VerifiedUser user = user_opt.value();
     user.trust_score = trust_score;
     
-    return WriteUser(brightid_address, user);
+    return WriteUser(provider_address, user);
 }
 
 // ===== Address Mapping Operations =====
 
-bool CBrightIDUserDB::LinkAddresses(const std::string& brightid_address, const std::string& o_address)
+bool CIdentityUserDB::LinkAddresses(const std::string& provider_address, const std::string& o_address)
 {
     LOCK(m_db_mutex);
     
     CDBBatch batch(*m_db);
     
     // Store both directions for fast lookup
-    batch.Write(std::make_pair(DB_BRIGHTID_TO_O, brightid_address), o_address);
-    batch.Write(std::make_pair(DB_O_TO_BRIGHTID, o_address), brightid_address);
+    batch.Write(std::make_pair(DB_BRIGHTID_TO_O, provider_address), o_address);
+    batch.Write(std::make_pair(DB_O_TO_BRIGHTID, o_address), provider_address);
     
     bool success = m_db->WriteBatch(batch, true);
     
     if (success) {
         LogDebug(BCLog::NET, "O BrightID DB: Linked %s <-> %s\n",
-                 brightid_address.substr(0, 16), o_address.substr(0, 16));
+                 provider_address.substr(0, 16), o_address.substr(0, 16));
     }
     
     return success;
 }
 
-bool CBrightIDUserDB::UnlinkAddresses(const std::string& brightid_address)
+bool CIdentityUserDB::UnlinkAddresses(const std::string& provider_address)
 {
     LOCK(m_db_mutex);
     
-    auto o_addr = GetOAddress(brightid_address);
+    auto o_addr = GetOAddress(provider_address);
     if (!o_addr.has_value()) {
         return false;
     }
     
     CDBBatch batch(*m_db);
-    batch.Erase(std::make_pair(DB_BRIGHTID_TO_O, brightid_address));
+    batch.Erase(std::make_pair(DB_BRIGHTID_TO_O, provider_address));
     batch.Erase(std::make_pair(DB_O_TO_BRIGHTID, o_addr.value()));
     
     bool success = m_db->WriteBatch(batch, true);
     
     if (success) {
         LogDebug(BCLog::NET, "O BrightID DB: Unlinked %s <-> %s\n",
-                 brightid_address.substr(0, 16), o_addr.value().substr(0, 16));
+                 provider_address.substr(0, 16), o_addr.value().substr(0, 16));
     }
     
     return success;
 }
 
-std::optional<std::string> CBrightIDUserDB::GetOAddress(const std::string& brightid_address) const
+std::optional<std::string> CIdentityUserDB::GetOAddress(const std::string& provider_address) const
 {
     LOCK(m_db_mutex);
     
     std::string o_address;
-    if (m_db->Read(std::make_pair(DB_BRIGHTID_TO_O, brightid_address), o_address)) {
+    if (m_db->Read(std::make_pair(DB_BRIGHTID_TO_O, provider_address), o_address)) {
         return o_address;
     }
     
     return std::nullopt;
 }
 
-std::optional<std::string> CBrightIDUserDB::GetBrightIDAddress(const std::string& o_address) const
+std::optional<std::string> CIdentityUserDB::GetBrightIDAddress(const std::string& o_address) const
 {
     LOCK(m_db_mutex);
     
-    std::string brightid_address;
-    if (m_db->Read(std::make_pair(DB_O_TO_BRIGHTID, o_address), brightid_address)) {
-        return brightid_address;
+    std::string provider_address;
+    if (m_db->Read(std::make_pair(DB_O_TO_BRIGHTID, o_address), provider_address)) {
+        return provider_address;
     }
     
     return std::nullopt;
@@ -207,29 +210,29 @@ std::optional<std::string> CBrightIDUserDB::GetBrightIDAddress(const std::string
 
 // ===== Anonymous ID Operations =====
 
-bool CBrightIDUserDB::WriteAnonymousID(const std::string& brightid_address, const std::string& anonymous_id)
+bool CIdentityUserDB::WriteAnonymousID(const std::string& provider_address, const std::string& anonymous_id)
 {
     LOCK(m_db_mutex);
     
     CDBBatch batch(*m_db);
-    batch.Write(std::make_pair(DB_ANONYMOUS_ID, brightid_address), anonymous_id);
+    batch.Write(std::make_pair(DB_ANONYMOUS_ID, provider_address), anonymous_id);
     
     return m_db->WriteBatch(batch, true);
 }
 
-std::optional<std::string> CBrightIDUserDB::GetAnonymousID(const std::string& brightid_address) const
+std::optional<std::string> CIdentityUserDB::GetAnonymousID(const std::string& provider_address) const
 {
     LOCK(m_db_mutex);
     
     std::string anonymous_id;
-    if (m_db->Read(std::make_pair(DB_ANONYMOUS_ID, brightid_address), anonymous_id)) {
+    if (m_db->Read(std::make_pair(DB_ANONYMOUS_ID, provider_address), anonymous_id)) {
         return anonymous_id;
     }
     
     return std::nullopt;
 }
 
-bool CBrightIDUserDB::WriteAnonymousReputation(const std::string& anonymous_id, double reputation)
+bool CIdentityUserDB::WriteAnonymousReputation(const std::string& anonymous_id, double reputation)
 {
     LOCK(m_db_mutex);
     
@@ -242,7 +245,7 @@ bool CBrightIDUserDB::WriteAnonymousReputation(const std::string& anonymous_id, 
     return m_db->WriteBatch(batch, true);
 }
 
-std::optional<double> CBrightIDUserDB::GetAnonymousReputation(const std::string& anonymous_id) const
+std::optional<double> CIdentityUserDB::GetAnonymousReputation(const std::string& anonymous_id) const
 {
     LOCK(m_db_mutex);
     
@@ -255,17 +258,17 @@ std::optional<double> CBrightIDUserDB::GetAnonymousReputation(const std::string&
     return std::nullopt;
 }
 
-bool CBrightIDUserDB::EraseAnonymousData(const std::string& brightid_address)
+bool CIdentityUserDB::EraseAnonymousData(const std::string& provider_address)
 {
     LOCK(m_db_mutex);
     
-    auto anon_id = GetAnonymousID(brightid_address);
+    auto anon_id = GetAnonymousID(provider_address);
     if (!anon_id.has_value()) {
         return false;
     }
     
     CDBBatch batch(*m_db);
-    batch.Erase(std::make_pair(DB_ANONYMOUS_ID, brightid_address));
+    batch.Erase(std::make_pair(DB_ANONYMOUS_ID, provider_address));
     batch.Erase(std::make_pair(DB_ANONYMOUS_REP, anon_id.value()));
     
     return m_db->WriteBatch(batch, true);
@@ -273,11 +276,11 @@ bool CBrightIDUserDB::EraseAnonymousData(const std::string& brightid_address)
 
 // ===== Batch Operations =====
 
-std::vector<BrightIDUser> CBrightIDUserDB::GetVerifiedUsers() const
+std::vector<VerifiedUser> CIdentityUserDB::GetVerifiedUsers() const
 {
     LOCK(m_db_mutex);
     
-    std::vector<BrightIDUser> verified_users;
+    std::vector<VerifiedUser> verified_users;
     std::unique_ptr<CDBIterator> iterator(m_db->NewIterator());
     
     for (iterator->Seek(DB_BRIGHTID_USER); iterator->Valid(); iterator->Next()) {
@@ -286,7 +289,7 @@ std::vector<BrightIDUser> CBrightIDUserDB::GetVerifiedUsers() const
             break;
         }
         
-        BrightIDUser user;
+        VerifiedUser user;
         if (iterator->GetValue(user) && user.IsVerified()) {
             verified_users.push_back(user);
         }
@@ -296,11 +299,11 @@ std::vector<BrightIDUser> CBrightIDUserDB::GetVerifiedUsers() const
     return verified_users;
 }
 
-std::vector<BrightIDUser> CBrightIDUserDB::GetActiveUsers() const
+std::vector<VerifiedUser> CIdentityUserDB::GetActiveUsers() const
 {
     LOCK(m_db_mutex);
     
-    std::vector<BrightIDUser> active_users;
+    std::vector<VerifiedUser> active_users;
     std::unique_ptr<CDBIterator> iterator(m_db->NewIterator());
     
     for (iterator->Seek(DB_BRIGHTID_USER); iterator->Valid(); iterator->Next()) {
@@ -309,7 +312,7 @@ std::vector<BrightIDUser> CBrightIDUserDB::GetActiveUsers() const
             break;
         }
         
-        BrightIDUser user;
+        VerifiedUser user;
         if (iterator->GetValue(user) && user.IsActive()) {
             active_users.push_back(user);
         }
@@ -319,11 +322,11 @@ std::vector<BrightIDUser> CBrightIDUserDB::GetActiveUsers() const
     return active_users;
 }
 
-std::vector<BrightIDUser> CBrightIDUserDB::GetUsersByStatus(BrightIDStatus status) const
+std::vector<VerifiedUser> CIdentityUserDB::GetUsersByStatus(BrightIDStatus status) const
 {
     LOCK(m_db_mutex);
     
-    std::vector<BrightIDUser> users_by_status;
+    std::vector<VerifiedUser> users_by_status;
     std::unique_ptr<CDBIterator> iterator(m_db->NewIterator());
     
     for (iterator->Seek(DB_BRIGHTID_USER); iterator->Valid(); iterator->Next()) {
@@ -332,7 +335,7 @@ std::vector<BrightIDUser> CBrightIDUserDB::GetUsersByStatus(BrightIDStatus statu
             break;
         }
         
-        BrightIDUser user;
+        VerifiedUser user;
         if (iterator->GetValue(user) && user.status == status) {
             users_by_status.push_back(user);
         }
@@ -341,11 +344,11 @@ std::vector<BrightIDUser> CBrightIDUserDB::GetUsersByStatus(BrightIDStatus statu
     return users_by_status;
 }
 
-std::vector<std::pair<std::string, BrightIDUser>> CBrightIDUserDB::GetAllUsers() const
+std::vector<std::pair<std::string, VerifiedUser>> CIdentityUserDB::GetAllUsers() const
 {
     LOCK(m_db_mutex);
     
-    std::vector<std::pair<std::string, BrightIDUser>> all_users;
+    std::vector<std::pair<std::string, VerifiedUser>> all_users;
     std::unique_ptr<CDBIterator> iterator(m_db->NewIterator());
     
     for (iterator->Seek(DB_BRIGHTID_USER); iterator->Valid(); iterator->Next()) {
@@ -354,7 +357,7 @@ std::vector<std::pair<std::string, BrightIDUser>> CBrightIDUserDB::GetAllUsers()
             break;
         }
         
-        BrightIDUser user;
+        VerifiedUser user;
         if (iterator->GetValue(user)) {
             all_users.emplace_back(key.second, user);
         }
@@ -364,7 +367,7 @@ std::vector<std::pair<std::string, BrightIDUser>> CBrightIDUserDB::GetAllUsers()
     return all_users;
 }
 
-bool CBrightIDUserDB::BatchWriteUsers(const std::vector<std::pair<std::string, BrightIDUser>>& batch)
+bool CIdentityUserDB::BatchWriteUsers(const std::vector<std::pair<std::string, VerifiedUser>>& batch)
 {
     LOCK(m_db_mutex);
     
@@ -383,13 +386,13 @@ bool CBrightIDUserDB::BatchWriteUsers(const std::vector<std::pair<std::string, B
     return success;
 }
 
-bool CBrightIDUserDB::BatchEraseUsers(const std::vector<std::string>& brightid_addresses)
+bool CIdentityUserDB::BatchEraseUsers(const std::vector<std::string>& provider_addresses)
 {
     LOCK(m_db_mutex);
     
     CDBBatch batch(*m_db);
     
-    for (const auto& addr : brightid_addresses) {
+    for (const auto& addr : provider_addresses) {
         batch.Erase(std::make_pair(DB_BRIGHTID_USER, addr));
         
         // Also erase related data
@@ -409,7 +412,7 @@ bool CBrightIDUserDB::BatchEraseUsers(const std::vector<std::string>& brightid_a
     bool success = m_db->WriteBatch(batch, true);
     
     if (success) {
-        LogPrintf("O BrightID DB: Batch erased %d users\n", brightid_addresses.size());
+        LogPrintf("O BrightID DB: Batch erased %d users\n", provider_addresses.size());
     }
     
     return success;
@@ -417,7 +420,7 @@ bool CBrightIDUserDB::BatchEraseUsers(const std::vector<std::string>& brightid_a
 
 // ===== Query Operations =====
 
-std::vector<std::string> CBrightIDUserDB::FindUsersByMethod(BrightIDVerificationMethod method) const
+std::vector<std::string> CIdentityUserDB::FindUsersByMethod(BrightIDVerificationMethod method) const
 {
     LOCK(m_db_mutex);
     
@@ -430,7 +433,7 @@ std::vector<std::string> CBrightIDUserDB::FindUsersByMethod(BrightIDVerification
             break;
         }
         
-        BrightIDUser user;
+        VerifiedUser user;
         if (iterator->GetValue(user) && user.method == method) {
             matching_users.push_back(key.second);
         }
@@ -439,7 +442,7 @@ std::vector<std::string> CBrightIDUserDB::FindUsersByMethod(BrightIDVerification
     return matching_users;
 }
 
-std::vector<std::string> CBrightIDUserDB::FindUsersByTrustScore(double min_score) const
+std::vector<std::string> CIdentityUserDB::FindUsersByTrustScore(double min_score) const
 {
     LOCK(m_db_mutex);
     
@@ -452,7 +455,7 @@ std::vector<std::string> CBrightIDUserDB::FindUsersByTrustScore(double min_score
             break;
         }
         
-        BrightIDUser user;
+        VerifiedUser user;
         if (iterator->GetValue(user) && user.trust_score >= min_score) {
             matching_users.push_back(key.second);
         }
@@ -461,7 +464,7 @@ std::vector<std::string> CBrightIDUserDB::FindUsersByTrustScore(double min_score
     return matching_users;
 }
 
-std::vector<std::string> CBrightIDUserDB::FindUsersAfterTimestamp(int64_t timestamp) const
+std::vector<std::string> CIdentityUserDB::FindUsersAfterTimestamp(int64_t timestamp) const
 {
     LOCK(m_db_mutex);
     
@@ -474,7 +477,7 @@ std::vector<std::string> CBrightIDUserDB::FindUsersAfterTimestamp(int64_t timest
             break;
         }
         
-        BrightIDUser user;
+        VerifiedUser user;
         if (iterator->GetValue(user) && user.verification_timestamp >= timestamp) {
             matching_users.push_back(key.second);
         }
@@ -483,7 +486,7 @@ std::vector<std::string> CBrightIDUserDB::FindUsersAfterTimestamp(int64_t timest
     return matching_users;
 }
 
-std::vector<std::string> CBrightIDUserDB::FindExpiringUsers(int64_t days_until_expiry) const
+std::vector<std::string> CIdentityUserDB::FindExpiringUsers(int64_t days_until_expiry) const
 {
     LOCK(m_db_mutex);
     
@@ -497,7 +500,7 @@ std::vector<std::string> CBrightIDUserDB::FindExpiringUsers(int64_t days_until_e
             break;
         }
         
-        BrightIDUser user;
+        VerifiedUser user;
         if (iterator->GetValue(user) && 
             user.expiration_timestamp > 0 && 
             user.expiration_timestamp <= expiry_threshold) {
@@ -510,7 +513,7 @@ std::vector<std::string> CBrightIDUserDB::FindExpiringUsers(int64_t days_until_e
     return expiring_users;
 }
 
-std::vector<CPubKey> CBrightIDUserDB::FindUsersByBirthCurrency(const std::string& birth_currency) const
+std::vector<CPubKey> CIdentityUserDB::FindUsersByBirthCurrency(const std::string& birth_currency) const
 {
     LOCK(m_db_mutex);
     
@@ -523,7 +526,7 @@ std::vector<CPubKey> CBrightIDUserDB::FindUsersByBirthCurrency(const std::string
             break;
         }
         
-        BrightIDUser user;
+        VerifiedUser user;
         if (iterator->GetValue(user)) {
             // Birth currency is stored in context_id as "COUNTRY:CURRENCY"
             // Example: "USA:OUSD", "MEX:OMXN", "FRA:OEUR"
@@ -558,9 +561,51 @@ std::vector<CPubKey> CBrightIDUserDB::FindUsersByBirthCurrency(const std::string
     return matching_users;
 }
 
+std::optional<std::string> CIdentityUserDB::GetBirthCurrencyByPubKey(const CPubKey& pubkey) const
+{
+    LOCK(m_db_mutex);
+    
+    // Convert public key to hex string (O address)
+    // Use the same format as stored in the database (HexStr of pubkey bytes)
+    std::vector<unsigned char> pubkey_bytes(pubkey.begin(), pubkey.end());
+    std::string o_address = HexStr(pubkey_bytes);
+    
+    // Get BrightID address from O address
+    std::string provider_address;
+    if (!m_db->Read(std::make_pair(DB_O_TO_BRIGHTID, o_address), provider_address)) {
+        LogDebug(BCLog::NET, "O BrightID DB: No BrightID address found for O address %s\n", 
+                 o_address.substr(0, 16).c_str());
+        return std::nullopt;
+    }
+    
+    // Read user data
+    auto user_opt = ReadUser(provider_address);
+    if (!user_opt.has_value()) {
+        LogDebug(BCLog::NET, "O BrightID DB: No user found for BrightID address %s\n",
+                 provider_address.substr(0, 16).c_str());
+        return std::nullopt;
+    }
+    
+    const VerifiedUser& user = user_opt.value();
+    
+    // Extract birth currency from context_id (format: "COUNTRY:CURRENCY")
+    size_t colon_pos = user.context_id.find(':');
+    if (colon_pos == std::string::npos || colon_pos >= user.context_id.length() - 1) {
+        LogDebug(BCLog::NET, "O BrightID DB: Invalid context_id format for user %s: %s\n",
+                 provider_address.substr(0, 16).c_str(), user.context_id.c_str());
+        return std::nullopt;
+    }
+    
+    std::string birth_currency = user.context_id.substr(colon_pos + 1);
+    LogDebug(BCLog::NET, "O BrightID DB: Found birth currency %s for user %s\n",
+             birth_currency.c_str(), provider_address.substr(0, 16).c_str());
+    
+    return birth_currency;
+}
+
 // ===== Statistics =====
 
-size_t CBrightIDUserDB::GetUserCount() const
+size_t CIdentityUserDB::GetUserCount() const
 {
     LOCK(m_db_mutex);
     
@@ -578,7 +623,7 @@ size_t CBrightIDUserDB::GetUserCount() const
     return count;
 }
 
-size_t CBrightIDUserDB::GetVerifiedUserCount() const
+size_t CIdentityUserDB::GetVerifiedUserCount() const
 {
     LOCK(m_db_mutex);
     
@@ -591,7 +636,7 @@ size_t CBrightIDUserDB::GetVerifiedUserCount() const
             break;
         }
         
-        BrightIDUser user;
+        VerifiedUser user;
         if (iterator->GetValue(user) && user.IsVerified()) {
             count++;
         }
@@ -600,7 +645,7 @@ size_t CBrightIDUserDB::GetVerifiedUserCount() const
     return count;
 }
 
-size_t CBrightIDUserDB::GetActiveUserCount() const
+size_t CIdentityUserDB::GetActiveUserCount() const
 {
     LOCK(m_db_mutex);
     
@@ -613,7 +658,7 @@ size_t CBrightIDUserDB::GetActiveUserCount() const
             break;
         }
         
-        BrightIDUser user;
+        VerifiedUser user;
         if (iterator->GetValue(user) && user.IsActive()) {
             count++;
         }
@@ -622,7 +667,7 @@ size_t CBrightIDUserDB::GetActiveUserCount() const
     return count;
 }
 
-std::map<BrightIDStatus, size_t> CBrightIDUserDB::GetUserCountByStatus() const
+std::map<BrightIDStatus, size_t> CIdentityUserDB::GetUserCountByStatus() const
 {
     LOCK(m_db_mutex);
     
@@ -635,7 +680,7 @@ std::map<BrightIDStatus, size_t> CBrightIDUserDB::GetUserCountByStatus() const
             break;
         }
         
-        BrightIDUser user;
+        VerifiedUser user;
         if (iterator->GetValue(user)) {
             status_counts[user.status]++;
         }
@@ -644,7 +689,7 @@ std::map<BrightIDStatus, size_t> CBrightIDUserDB::GetUserCountByStatus() const
     return status_counts;
 }
 
-double CBrightIDUserDB::GetAverageTrustScore() const
+double CIdentityUserDB::GetAverageTrustScore() const
 {
     LOCK(m_db_mutex);
     
@@ -658,7 +703,7 @@ double CBrightIDUserDB::GetAverageTrustScore() const
             break;
         }
         
-        BrightIDUser user;
+        VerifiedUser user;
         if (iterator->GetValue(user) && user.IsVerified()) {
             total_trust += user.trust_score;
             count++;
@@ -670,7 +715,7 @@ double CBrightIDUserDB::GetAverageTrustScore() const
 
 // ===== Maintenance =====
 
-bool CBrightIDUserDB::PruneExpiredUsers(int64_t cutoff_timestamp)
+bool CIdentityUserDB::PruneExpiredUsers(int64_t cutoff_timestamp)
 {
     LOCK(m_db_mutex);
     
@@ -683,7 +728,7 @@ bool CBrightIDUserDB::PruneExpiredUsers(int64_t cutoff_timestamp)
             break;
         }
         
-        BrightIDUser user;
+        VerifiedUser user;
         if (iterator->GetValue(user)) {
             // Prune if expired before cutoff
             if (user.expiration_timestamp > 0 && user.expiration_timestamp < cutoff_timestamp) {
@@ -704,7 +749,7 @@ bool CBrightIDUserDB::PruneExpiredUsers(int64_t cutoff_timestamp)
     return true;
 }
 
-bool CBrightIDUserDB::PruneInactiveUsers(int64_t inactive_days)
+bool CIdentityUserDB::PruneInactiveUsers(int64_t inactive_days)
 {
     LOCK(m_db_mutex);
     
@@ -718,7 +763,7 @@ bool CBrightIDUserDB::PruneInactiveUsers(int64_t inactive_days)
             break;
         }
         
-        BrightIDUser user;
+        VerifiedUser user;
         if (iterator->GetValue(user)) {
             // Prune if not active and last verification was before cutoff
             if (!user.is_active && user.verification_timestamp < cutoff_timestamp) {
@@ -739,7 +784,7 @@ bool CBrightIDUserDB::PruneInactiveUsers(int64_t inactive_days)
     return true;
 }
 
-void CBrightIDUserDB::Compact()
+void CIdentityUserDB::Compact()
 {
     LOCK(m_db_mutex);
     
@@ -752,20 +797,20 @@ void CBrightIDUserDB::Compact()
     // Manual compaction can be triggered via -reindex flag
 }
 
-size_t CBrightIDUserDB::EstimateSize() const
+size_t CIdentityUserDB::EstimateSize() const
 {
     LOCK(m_db_mutex);
     return m_db->DynamicMemoryUsage();
 }
 
-std::optional<fs::path> CBrightIDUserDB::StoragePath() const
+std::optional<fs::path> CIdentityUserDB::StoragePath() const
 {
     return m_db->StoragePath();
 }
 
 // ===== Backup/Restore =====
 
-bool CBrightIDUserDB::ExportUsers(const fs::path& export_path) const
+bool CIdentityUserDB::ExportUsers(const fs::path& export_path) const
 {
     LOCK(m_db_mutex);
     
@@ -784,7 +829,7 @@ bool CBrightIDUserDB::ExportUsers(const fs::path& export_path) const
     }
 }
 
-bool CBrightIDUserDB::ImportUsers(const fs::path& import_path)
+bool CIdentityUserDB::ImportUsers(const fs::path& import_path)
 {
     LOCK(m_db_mutex);
     
@@ -799,7 +844,7 @@ bool CBrightIDUserDB::ImportUsers(const fs::path& import_path)
     }
 }
 
-bool CBrightIDUserDB::VerifyIntegrity() const
+bool CIdentityUserDB::VerifyIntegrity() const
 {
     LOCK(m_db_mutex);
     
@@ -815,7 +860,7 @@ bool CBrightIDUserDB::VerifyIntegrity() const
         
         total_users++;
         
-        BrightIDUser user;
+        VerifiedUser user;
         if (!iterator->GetValue(user)) {
             corrupted_users++;
             LogPrintf("O BrightID DB: Corrupted user entry: %s\n", key.second.substr(0, 16));

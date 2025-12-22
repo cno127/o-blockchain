@@ -110,6 +110,8 @@ add_library(bitcoin_consensus STATIC EXCLUDE_FROM_ALL
   consensus/o_pow_pob.cpp
   consensus/o_business_db.cpp
   consensus/o_brightid_db.cpp
+  consensus/identity_provider_registry.cpp
+  consensus/identity_provider_interface.cpp
   consensus/stabilization_mining.cpp
   consensus/stabilization_helpers.cpp
   consensus/currency_exchange.cpp

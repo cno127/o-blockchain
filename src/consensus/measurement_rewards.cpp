@@ -3,12 +3,14 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <consensus/measurement_rewards.h>
+#include <consensus/o_brightid_db.h>
 #include <measurement/measurement_system.h>
 #include <logging.h>
 #include <util/time.h>
 #include <hash.h>
 #include <key_io.h>
 #include <addresstype.h>
+#include <util/strencodings.h>
 
 namespace OConsensus {
 
@@ -20,7 +22,8 @@ MeasurementRewardsManager::MeasurementRewardsManager() {
 
 uint256 MeasurementRewardTransaction::GetHash() const {
     HashWriter ss{};
-    ss << measurement_id << recipient << reward_amount << static_cast<uint8_t>(measurement_type) << timestamp;
+    ss << measurement_id << recipient << reward_amount << reward_currency 
+       << static_cast<uint8_t>(measurement_type) << timestamp;
     return ss.GetHash();
 }
 
@@ -148,12 +151,20 @@ CMutableTransaction MeasurementRewardsManager::CreateRewardTransaction(
     // No inputs needed - these are newly created coins
     
     // Create output to the measurement contributor
+    // NOTE: Currently using legacy CTxOut, but reward_currency field tracks which currency
+    // this reward should be paid in. When multi-currency transactions are fully integrated,
+    // this should use CMultiCurrencyTxOut with the appropriate currency_id.
     CScript reward_script = GetScriptForDestination(PKHash(reward.recipient.GetID()));
     tx.vout.push_back(CTxOut(reward.reward_amount, reward_script));
     
     // Add metadata to the transaction
     // We can use the nLockTime field to store the measurement ID hash
     tx.nLockTime = reward.measurement_id.GetUint64(0);
+    
+    LogPrintf("O Measurement Rewards: Created reward transaction - "
+              "Currency: %s, Amount: %d, Measurement: %s\n",
+              reward.reward_currency.c_str(), reward.reward_amount,
+              reward.measurement_id.GetHex().substr(0, 8).c_str());
     
     return tx;
 }
@@ -170,8 +181,15 @@ std::vector<MeasurementRewardTransaction> MeasurementRewardsManager::GetUnreward
     // 1. Getting all measurements from the measurement system
     // 2. Checking which ones haven't been rewarded yet
     // 3. Creating reward transactions for them
+    // 4. For each measurement, get the submitter's birth currency and use it as reward_currency
     
     LogPrintf("O Measurement Rewards: Getting unrewarded measurements for height %d\n", height);
+    
+    // NOTE: When implementing, for each measurement:
+    // - Get submitter CPubKey from measurement.submitter
+    // - Call g_brightid_db->GetBirthCurrencyByPubKey(measurement.submitter) to get birth currency
+    // - Set reward.reward_currency to the birth currency (e.g., "OUSD", "OEUR")
+    // - This ensures users are rewarded in their birth currency, not the measurement currency
     
     return unrewarded_rewards;
 }

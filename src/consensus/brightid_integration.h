@@ -34,8 +34,8 @@ enum class BrightIDVerificationMethod {
     UNKNOWN            // Unknown method
 };
 
-/** BrightID User Information */
-struct BrightIDUser {
+/** Verified User Information (generic - supports BrightID, KYC, WorldCoin, Idena, etc.) */
+struct VerifiedUser {
     std::string brightid_address;        // BrightID address (hash)
     std::string context_id;              // Context ID for this application
     BrightIDStatus status;               // Verification status
@@ -47,13 +47,13 @@ struct BrightIDUser {
     double trust_score;                  // Trust score from social graph
     bool is_active;                      // Whether user is currently active
     
-    BrightIDUser()
+    VerifiedUser()
         : brightid_address(), context_id(), status(BrightIDStatus::UNVERIFIED),
           method(BrightIDVerificationMethod::UNKNOWN), verification_timestamp(0),
           expiration_timestamp(0), sponsor_address(), connections(),
           trust_score(0.0), is_active(false) {}
     
-    SERIALIZE_METHODS(BrightIDUser, obj) {
+    SERIALIZE_METHODS(VerifiedUser, obj) {
         // Convert double to int64_t for serialization (6 decimal precision)
         int64_t trust_score_int = static_cast<int64_t>(obj.trust_score * 1000000);
         uint8_t status_val = static_cast<uint8_t>(obj.status);
@@ -75,6 +75,9 @@ struct BrightIDUser {
     bool IsExpired() const { return status == BrightIDStatus::EXPIRED; }
     bool IsActive() const { return is_active && IsVerified() && !IsExpired(); }
 };
+
+// Legacy type alias for backward compatibility during transition
+using BrightIDUser = VerifiedUser;
 
 /** BrightID Verification Request */
 struct BrightIDVerificationRequest {

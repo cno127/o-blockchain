@@ -24,6 +24,14 @@ namespace ORewards {
  * - O Blockchain: ~$14.7B/year (2,800 OUSD/block × 3,504,000 blocks/year × 1.5 USD/OUSD)
  * - After Bitcoin's next halving: O Blockchain will have ~2× Bitcoin's annual rate
  * - Fixed rewards for stablecoin economics (no halving)
+ * 
+ * IMPORTANT: Traditional mining (PoW/PoB) rewards are paid in OUSD because:
+ * - Hardware costs are similar in USD globally
+ * - Prevents favoring stronger currencies
+ * - Provides consistent reward value worldwide
+ * 
+ * Note: Measurement and stabilization rewards are paid in currency-specific O currencies
+ * (e.g., water price in EUR → paid in OEUR, stabilizing OMXN → paid in OMXN)
  */
 static constexpr CAmount BLOCK_REWARD = 280000;              // 2,800.00 OUSD per block (PoW) - CONSTANT (matches Bitcoin annual rate)
 static constexpr CAmount POB_BLOCK_REWARD = 224000;          // 2,240.00 OUSD per block (PoB - 80% of PoW) - CONSTANT
