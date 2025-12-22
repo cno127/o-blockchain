@@ -20,72 +20,6 @@
 using namespace OMeasurement;
 using node::NodeContext;
 
-static RPCHelpMan submitwaterprice()
-{
-    return RPCHelpMan{
-        "submitwaterprice",
-        "\n[DEPRECATED] Use 'submitwaterpricetx' instead.\n"
-        "This command stored measurements in RAM only (lost on restart).\n"
-        "The new blockchain-based command ensures all nodes sync perfectly.\n",
-        {
-            {"currency", RPCArg::Type::STR, RPCArg::Optional::NO, "Currency code (USD, EUR, JPY, etc.)"},
-            {"price", RPCArg::Type::NUM, RPCArg::Optional::NO, "Price in smallest unit (cents for USD, etc.)"},
-            {"location", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "Geographic location (for offline measurements)"},
-            {"source_url", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "Source URL (for online measurements)"},
-            {"proof_hash", RPCArg::Type::STR_HEX, RPCArg::Optional::OMITTED, "SHA256 hash of proof image"},
-            {"invite_id", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "Invitation ID"},
-        },
-        RPCResult{
-            RPCResult::Type::OBJ, "", "",
-            {
-                {RPCResult::Type::STR, "error", "Deprecation error"},
-                {RPCResult::Type::STR, "use_instead", "New command to use"},
-            }
-        },
-        RPCExamples{
-            HelpExampleCli("submitwaterpricetx", "\"USD\" 1500000 \"abc123...\" \"url\" \"https://example.com/water\"")
-        },
-        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
-        {
-            throw JSONRPCError(RPC_METHOD_DEPRECATED, 
-                "This command is deprecated. Use 'submitwaterpricetx' instead.\n"
-                "The new command creates a blockchain transaction that all nodes can validate and sync.\n"
-                "Example: bitcoin-cli submitwaterpricetx \"USD\" 1500000 \"invite_id\" \"url\" \"https://...\"");
-        },
-    };
-}
-
-static RPCHelpMan validatemeasurement()
-{
-    return RPCHelpMan{
-        "validatemeasurement",
-        "\n[DEPRECATED] Use 'submitvalidationtx' instead.\n"
-        "This command stored validations in RAM only (lost on restart).\n"
-        "The new blockchain-based command ensures all nodes sync perfectly.\n",
-        {
-            {"measurement_id", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "Measurement ID to validate"},
-            {"type", RPCArg::Type::STR, RPCArg::Optional::NO, "Type: 'water' or 'exchange'"},
-        },
-        RPCResult{
-            RPCResult::Type::OBJ, "", "",
-            {
-                {RPCResult::Type::STR, "error", "Deprecation error"},
-                {RPCResult::Type::STR, "use_instead", "New command to use"},
-            }
-        },
-        RPCExamples{
-            HelpExampleCli("submitvalidationtx", "\"abc123...\" \"water_price\" true \"Verified URL\"")
-        },
-        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
-        {
-            throw JSONRPCError(RPC_METHOD_DEPRECATED, 
-                "This command is deprecated. Use 'submitvalidationtx' instead.\n"
-                "The new command creates a blockchain transaction that all nodes can validate and sync.\n"
-                "Example: bitcoin-cli submitvalidationtx \"measurement_id\" \"water_price\" true \"Notes\"");
-        },
-    };
-}
-
 static RPCHelpMan getaveragewaterprice()
 {
     return RPCHelpMan{
@@ -134,61 +68,6 @@ static RPCHelpMan getaveragewaterprice()
             result.pushKV("measurement_count", (int)measurements.size());
             
             return result;
-        },
-    };
-}
-
-static RPCHelpMan submitexchangerate()
-{
-    return RPCHelpMan{
-        "submitexchangerate",
-        "\nSubmit an exchange rate measurement.\n",
-        {
-            {"from_currency", RPCArg::Type::STR, RPCArg::Optional::NO, "Source currency code"},
-            {"to_currency", RPCArg::Type::STR, RPCArg::Optional::NO, "Target currency code"},
-            {"rate", RPCArg::Type::NUM, RPCArg::Optional::NO, "Exchange rate"},
-            {"location", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "Geographic location (for offline measurements)"},
-            {"source_url", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "Source URL (for online measurements)"},
-            {"invite_id", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "Invitation ID"},
-        },
-        RPCResult{
-            RPCResult::Type::OBJ, "", "",
-            {
-                {RPCResult::Type::STR_HEX, "measurement_id", "Unique measurement ID"},
-                {RPCResult::Type::STR, "status", "Submission status"},
-                {RPCResult::Type::STR_AMOUNT, "reward", "Reward amount"},
-            }
-        },
-        RPCExamples{
-            HelpExampleCli("submitexchangerate", "\"USD\" \"EUR\" 0.85 \"New York\" \"https://example.com\" \"abc123...\"")
-            + HelpExampleRpc("submitexchangerate", "\"USD\", \"EUR\", 0.85, \"New York\", \"https://example.com\", \"abc123...\"")
-        },
-        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
-        {
-            std::string from_currency = request.params[0].get_str();
-            std::string to_currency = request.params[1].get_str();
-            double rate = request.params[2].get_real();
-            std::string location = request.params[3].isNull() ? "" : request.params[3].get_str();
-            std::string source_url = request.params[4].isNull() ? "" : request.params[4].get_str();
-            uint256 invite_id = ParseHashV(request.params[5], "invite_id");
-            
-            // Create measurement
-            ExchangeRateMeasurement measurement;
-            measurement.measurement_id = GetRandHash();
-            measurement.from_currency = from_currency;
-            measurement.to_currency = to_currency;
-            measurement.exchange_rate = rate;
-            measurement.location = location;
-            measurement.source_url = source_url;
-            measurement.timestamp = GetTime();
-            measurement.invite_id = invite_id;
-            measurement.is_validated = false;
-            
-            // DEPRECATED: This command no longer works
-            throw JSONRPCError(RPC_METHOD_DEPRECATED, 
-                "This command is deprecated. Use 'submitexchangeratetx' instead.\n"
-                "The new command creates a blockchain transaction that all nodes can validate and sync.\n"
-                "Example: bitcoin-cli submitexchangeratetx \"OUSD\" \"USD\" 1500000 \"invite_id\" \"https://exchange.com\"");
         },
     };
 }
@@ -1599,10 +1478,7 @@ static RPCHelpMan getactiveinvites()
 void RegisterOMeasurementRPCCommands(CRPCTable& t)
 {
     static const CRPCCommand commands[] = {
-        {"measurement", &submitwaterprice},
-        {"measurement", &validatemeasurement},
         {"measurement", &getaveragewaterprice},
-        {"measurement", &submitexchangerate},
         {"measurement", &createinvites},
         {"measurement", &getactiveinvites},
         {"measurement", &checkmeasurementreadiness},

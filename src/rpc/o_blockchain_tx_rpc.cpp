@@ -10,12 +10,10 @@
  */
 
 #include <rpc/server.h>
-#include <rpc/server_util.h>
 #include <rpc/util.h>
 #include <consensus/validation.h>
 #include <core_io.h>
 #include <key_io.h>
-#include <node/context.h>
 #include <policy/policy.h>
 #include <primitives/o_transactions.h>
 #include <primitives/transaction.h>
@@ -30,9 +28,6 @@
 #include <wallet/wallet.h>
 #include <wallet/rpc/wallet.h>
 #include <wallet/rpc/util.h>
-#include <wallet/coinselection.h>
-#include <rpc/server_util.h>
-#include <node/context.h>
 
 #include <optional>
 
