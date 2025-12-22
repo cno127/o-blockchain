@@ -30,6 +30,9 @@
 #include <wallet/wallet.h>
 #include <wallet/rpc/wallet.h>
 #include <wallet/rpc/util.h>
+#include <wallet/coinselection.h>
+#include <rpc/server_util.h>
+#include <node/context.h>
 
 #include <optional>
 
@@ -224,7 +227,7 @@ static RPCHelpMan submitwaterpricetx()
         "This transaction will be validated and stored by all nodes.\n",
         {
             {"currency_code", RPCArg::Type::STR, RPCArg::Optional::NO, "Currency code (USD, EUR, JPY, etc.)"},
-            {"price", RPCArg::Type::NUM, RPCArg::Optional::NO, "Price * 1,000,000 (6 decimal places)"},
+            {"price", RPCArg::Type::STR, RPCArg::Optional::NO, "Price * 1,000,000 (6 decimal places, numeric string or number)"},
             {"invite_id", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "Measurement invitation ID"},
             {"proof_type", RPCArg::Type::STR, RPCArg::Optional::NO, "'url' or 'gps_photo'"},
             {"proof_data", RPCArg::Type::STR, RPCArg::Optional::NO, "URL or GPS coords + photo hash"},
@@ -257,7 +260,13 @@ static RPCHelpMan submitwaterpricetx()
             // Parse parameters
             CWaterPriceMeasurementData data;
             data.currency_code = request.params[0].get_str();
-            data.price = request.params[1].getInt<int64_t>();
+            // Handle price as either number or string (bitcoin-cli sometimes passes as string)
+            if (request.params[1].isNum()) {
+                data.price = request.params[1].getInt<int64_t>();
+            } else {
+                std::string price_str = request.params[1].get_str();
+                data.price = LocaleIndependentAtoi<int64_t>(price_str);
+            }
             data.invite_id = ParseHashV(request.params[2], "invite_id");
             data.proof_type = request.params[3].get_str();
             data.proof_data = request.params[4].get_str();
@@ -332,7 +341,7 @@ static RPCHelpMan submitexchangeratetx()
         {
             {"from_currency", RPCArg::Type::STR, RPCArg::Optional::NO, "From currency (e.g., OUSD)"},
             {"to_currency", RPCArg::Type::STR, RPCArg::Optional::NO, "To currency (e.g., USD)"},
-            {"exchange_rate", RPCArg::Type::NUM, RPCArg::Optional::NO, "Rate * 1,000,000 (6 decimal places)"},
+            {"exchange_rate", RPCArg::Type::STR, RPCArg::Optional::NO, "Rate * 1,000,000 (6 decimal places, numeric string or number)"},
             {"invite_id", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "Measurement invitation ID"},
             {"proof_data", RPCArg::Type::STR, RPCArg::Optional::NO, "Exchange platform URL or proof"},
         },
@@ -366,7 +375,13 @@ static RPCHelpMan submitexchangeratetx()
             CExchangeRateMeasurementData data;
             data.from_currency = request.params[0].get_str();
             data.to_currency = request.params[1].get_str();
-            data.exchange_rate = request.params[2].getInt<int64_t>();
+            // Handle exchange_rate as either number or string (bitcoin-cli sometimes passes as string)
+            if (request.params[2].isNum()) {
+                data.exchange_rate = request.params[2].getInt<int64_t>();
+            } else {
+                std::string rate_str = request.params[2].get_str();
+                data.exchange_rate = LocaleIndependentAtoi<int64_t>(rate_str);
+            }
             data.invite_id = ParseHashV(request.params[3], "invite_id");
             data.proof_data = request.params[4].get_str();
             data.timestamp = GetTime();
