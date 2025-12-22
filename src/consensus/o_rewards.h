@@ -16,9 +16,17 @@ namespace ORewards {
  * 1 O = 100 units (like USD: 1 dollar = 100 cents)
  */
 
-/** Block Mining Rewards - CONSTANT (No Halving) */
-static constexpr CAmount BLOCK_REWARD = 5000;              // 50.00 O per block (PoW) - CONSTANT
-static constexpr CAmount POB_BLOCK_REWARD = 4000;          // 40.00 O per block (PoB - 80% of PoW) - CONSTANT
+/** Block Mining Rewards - CONSTANT (No Halving) 
+ * 
+ * Updated: Set to match Bitcoin's current annual reward rate
+ * Rationale: Match Bitcoin's annual rewards now, exceed after next halving (~2028)
+ * - Bitcoin current: ~$14.7B/year (3.125 BTC/block × 52,560 blocks/year × ~$89,459/BTC)
+ * - O Blockchain: ~$14.7B/year (2,800 OUSD/block × 3,504,000 blocks/year × 1.5 USD/OUSD)
+ * - After Bitcoin's next halving: O Blockchain will have ~2× Bitcoin's annual rate
+ * - Fixed rewards for stablecoin economics (no halving)
+ */
+static constexpr CAmount BLOCK_REWARD = 280000;              // 2,800.00 OUSD per block (PoW) - CONSTANT (matches Bitcoin annual rate)
+static constexpr CAmount POB_BLOCK_REWARD = 224000;          // 2,240.00 OUSD per block (PoB - 80% of PoW) - CONSTANT
 
 /** Transaction Fees */
 static constexpr CAmount MIN_TRANSACTION_FEE = 10;         // 0.10 O per transaction

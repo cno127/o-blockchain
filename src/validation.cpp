@@ -13,6 +13,7 @@
 #include <clientversion.h>
 #include <consensus/amount.h>
 #include <consensus/consensus.h>
+#include <consensus/o_rewards.h>
 #include <consensus/merkle.h>
 #include <consensus/tx_check.h>
 #include <consensus/tx_verify.h>
@@ -1946,6 +1947,14 @@ PackageMempoolAcceptResult ProcessNewPackage(Chainstate& active_chainstate, CTxM
 
 CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams)
 {
+    // O Blockchain uses constant block rewards (no halving)
+    // O Blockchain sets nSubsidyHalvingInterval to 0 to indicate constant rewards
+    if (consensusParams.nSubsidyHalvingInterval == 0) {
+        // O Blockchain: Use constant block reward (no halving)
+        return ORewards::GetBlockReward(nHeight);
+    }
+    
+    // Bitcoin-style: Halving every 210,000 blocks
     int halvings = nHeight / consensusParams.nSubsidyHalvingInterval;
     // Force block reward to zero when right shift is undefined.
     if (halvings >= 64)

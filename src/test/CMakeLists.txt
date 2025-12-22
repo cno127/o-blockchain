@@ -130,6 +130,7 @@ add_executable(test_bitcoin
   simple_o_tests.cpp
   user_consensus_tests.cpp
   o_pow_pob_tests.cpp
+  o_reward_tests.cpp
 )
 
 include(TargetDataSources)
