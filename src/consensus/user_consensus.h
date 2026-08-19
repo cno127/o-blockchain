@@ -224,7 +224,10 @@ private:
     bool ValidateChallenge(const ChallengeRecord& challenge) const;
     bool CheckEndorsementThresholds(const CPubKey& user_key) const;
     void UpdateUserStatus(const CPubKey& user_key);
-    std::vector<CPubKey> SelectRandomEndorsers(uint32_t count, const CPubKey& exclude_user) const;
+    /** Select endorsers for a user (CONSENSUS-CRITICAL: seed must be derived
+     *  from consensus data only, e.g. SHA256(block_hash || subject pubkey), so
+     *  every node computes the same endorser set — see repo issue #13) */
+    std::vector<CPubKey> SelectRandomEndorsers(uint32_t count, const CPubKey& exclude_user, const uint256& seed) const;
     double CalculateEndorsementWeight(const EndorsementRecord& endorsement) const;
     
     /** Anti-Sybil Measures */

@@ -427,7 +427,7 @@ void UserRegistryConsensus::UpdateUserStatus(const CPubKey& user_key) {
     }
 }
 
-std::vector<CPubKey> UserRegistryConsensus::SelectRandomEndorsers(uint32_t count, const CPubKey& exclude_user) const {
+std::vector<CPubKey> UserRegistryConsensus::SelectRandomEndorsers(uint32_t count, const CPubKey& exclude_user, const uint256& seed) const {
     std::vector<CPubKey> candidates;
     std::vector<CPubKey> verified_users = GetVerifiedUsers();
     
@@ -438,13 +438,25 @@ std::vector<CPubKey> UserRegistryConsensus::SelectRandomEndorsers(uint32_t count
         }
     }
     
-    // ⚠️ OPEN PROBLEM (see wiki Open-Problems #1): this shuffle is UNSEEDED, so
-    // each node selects different endorsers. If endorser selection must be
-    // network-agreed, seed a FastRandomContext from consensus data (block hash +
-    // subject pubkey) exactly like StabilizationMining::RandomSample, and sort
-    // candidates canonically first. Left unchanged pending a decision on whether
-    // endorser draws are consensus-critical or purely local/advisory.
-    std::shuffle(candidates.begin(), candidates.end(), FastRandomContext());
+    // CONSENSUS-CRITICAL DETERMINISM (decision Aug 2026: endorser selection is
+    // network-agreed — Case A, see repo issue #13):
+    // 1. Canonically sort candidates so the starting order is identical on every
+    //    node regardless of map iteration order.
+    // 2. Shuffle with an RNG seeded from consensus data. Callers MUST derive the
+    //    seed from consensus data only, e.g.
+    //    HashWriter{} << block_hash << exclude_user → GetSHA256()
+    //    (same pattern as StabilizationMining::CreateStabilizationTransactions).
+    // An unseeded shuffle here would make each node select different endorsers,
+    // breaking agreement on verification outcomes.
+    std::sort(candidates.begin(), candidates.end(),
+              [](const CPubKey& a, const CPubKey& b) {
+                  return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());
+              });
+    
+    FastRandomContext rng(seed);
+    for (size_t i = candidates.size() > 0 ? candidates.size() - 1 : 0; i > 0; --i) {
+        std::swap(candidates[i], candidates[rng.randrange(i + 1)]);
+    }
     
     std::vector<CPubKey> selected;
     selected.reserve(std::min(count, static_cast<uint32_t>(candidates.size())));
