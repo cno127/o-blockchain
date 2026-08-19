@@ -138,13 +138,17 @@ public:
     
     // ===== Recipient Selection =====
     
-    /** Select random authenticated users from stable currency regions */
-    std::vector<CPubKey> SelectRewardRecipients(int count, 
-                                                const std::string& exclude_currency = "") const;
+    /** Select random authenticated users from stable currency regions.
+     *  seed MUST be derived from consensus data (e.g. prev block hash + currency + height)
+     *  so that every node selects the same recipients. */
+    std::vector<CPubKey> SelectRewardRecipients(int count,
+                                                const std::string& exclude_currency,
+                                                const uint256& seed) const;
     
-    /** Select recipients specifically from a stable currency */
+    /** Select recipients specifically from a stable currency (deterministic, see above) */
     std::vector<CPubKey> SelectRecipientsFromCurrency(int count,
-                                                      const std::string& currency) const;
+                                                      const std::string& currency,
+                                                      const uint256& seed) const;
     
     /** Get users by their birth currency (from user consensus system) */
     std::vector<CPubKey> GetUsersByCurrency(const std::string& currency) const;
@@ -211,7 +215,7 @@ private:
     // Helper functions
     double CalculateStabilityRatio(double expected, double observed) const;
     bool MeetsInstabilityThreshold(const CurrencyStabilityInfo& info, int height) const;
-    std::vector<CPubKey> RandomSample(const std::vector<CPubKey>& users, int count) const;
+    std::vector<CPubKey> RandomSample(const std::vector<CPubKey>& users, int count, const uint256& seed) const;
     
     /** Calculate dynamic stabilization factor based on volatility level */
     double CalculateDynamicStabilizationFactor(double stability_ratio, const std::string& currency) const;

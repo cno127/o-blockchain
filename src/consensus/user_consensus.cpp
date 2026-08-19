@@ -438,7 +438,12 @@ std::vector<CPubKey> UserRegistryConsensus::SelectRandomEndorsers(uint32_t count
         }
     }
     
-    // Shuffle and select random endorsers
+    // ⚠️ OPEN PROBLEM (see wiki Open-Problems #1): this shuffle is UNSEEDED, so
+    // each node selects different endorsers. If endorser selection must be
+    // network-agreed, seed a FastRandomContext from consensus data (block hash +
+    // subject pubkey) exactly like StabilizationMining::RandomSample, and sort
+    // candidates canonically first. Left unchanged pending a decision on whether
+    // endorser draws are consensus-critical or purely local/advisory.
     std::shuffle(candidates.begin(), candidates.end(), FastRandomContext());
     
     std::vector<CPubKey> selected;

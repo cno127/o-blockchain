@@ -8,6 +8,7 @@
 #include <consensus/o_brightid_db.h>
 #include <measurement/measurement_system.h>
 #include <addresstype.h>
+#include <hash.h>
 #include <logging.h>
 #include <random.h>
 #include <util/strencodings.h>
@@ -135,7 +136,7 @@ CAmount StabilizationMining::CalculateVolumeDifference(const std::string& curren
 }
 
 std::vector<CPubKey> StabilizationMining::SelectRewardRecipients(
-    int count, const std::string& exclude_currency) const {
+    int count, const std::string& exclude_currency, const uint256& seed) const {
     std::vector<CPubKey> all_recipients;
     std::vector<std::string> stable = GetStableCurrencies();
     
@@ -146,13 +147,13 @@ std::vector<CPubKey> StabilizationMining::SelectRewardRecipients(
         all_recipients.insert(all_recipients.end(), currency_users.begin(), currency_users.end());
     }
     
-    return RandomSample(all_recipients, std::min(count, (int)all_recipients.size()));
+    return RandomSample(all_recipients, std::min(count, (int)all_recipients.size()), seed);
 }
 
 std::vector<CPubKey> StabilizationMining::SelectRecipientsFromCurrency(
-    int count, const std::string& currency) const {
+    int count, const std::string& currency, const uint256& seed) const {
     auto users = GetUsersByCurrency(currency);
-    return RandomSample(users, std::min(count, (int)users.size()));
+    return RandomSample(users, std::min(count, (int)users.size()), seed);
 }
 
 std::vector<CPubKey> StabilizationMining::GetUsersByCurrency(const std::string& currency) const {
@@ -246,7 +247,12 @@ std::vector<CTransaction> StabilizationMining::CreateStabilizationTransactions(
         // Calculate number of recipients based on economic need
         // More recipients for larger stabilization amounts
         int recipient_count = CalculateOptimalRecipientCount(currency_coins);
-        auto recipients = SelectRewardRecipients(recipient_count, currency);
+        // Deterministic, consensus-derived seed: every node must draw the SAME
+        // recipients or the regenerated stabilization txs won't match.
+        HashWriter seed_hasher{};
+        seed_hasher << block.hashPrevBlock << currency << height;
+        const uint256 selection_seed = seed_hasher.GetSHA256();
+        auto recipients = SelectRewardRecipients(recipient_count, currency, selection_seed);
         if (recipients.empty()) continue;
         
         // Calculate amount per recipient based on total coins and recipient count
@@ -427,11 +433,23 @@ bool StabilizationMining::MeetsInstabilityThreshold(const CurrencyStabilityInfo&
     return info.IsUnstable() && (height - info.unstable_since_height) >= StabilizationConfig::UNSTABLE_TIME_RANGE;
 }
 
-std::vector<CPubKey> StabilizationMining::RandomSample(const std::vector<CPubKey>& users, int count) const {
+std::vector<CPubKey> StabilizationMining::RandomSample(const std::vector<CPubKey>& users, int count, const uint256& seed) const {
     if (users.empty() || count <= 0) return {};
     std::vector<CPubKey> sample = users;
     
-    FastRandomContext rng;
+    // CONSENSUS-CRITICAL DETERMINISM:
+    // 1. Canonically sort candidates so the starting order is identical on every
+    //    node regardless of how the candidate set was assembled.
+    // 2. Seed the RNG from consensus data (prev block hash + currency + height,
+    //    hashed by the caller) so every node draws the same recipients.
+    // An unseeded FastRandomContext here would make each node pick different
+    // recipients, forking the chain as soon as more than one node mines.
+    std::sort(sample.begin(), sample.end(),
+              [](const CPubKey& a, const CPubKey& b) {
+                  return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());
+              });
+    
+    FastRandomContext rng(seed);
     for (size_t i = sample.size() - 1; i > 0; --i) {
         std::swap(sample[i], sample[rng.randrange(i + 1)]);
     }
