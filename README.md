@@ -39,7 +39,9 @@ basic need instead of fiat or scarcity.
   water-price rates, new coins are minted to users of *stable* currencies,
   diluting unstable ones — the offender's sanction becomes the reward of the
   offended
-- **👤 Proof of personhood**: BrightID integration, one person = one identity
+- **👤 Proof of personhood**: one person = one identity, verified through
+  multiple accepted methods (government ID, video call, document review,
+  biometrics, third-party KYC — BrightID among them)
 - **🔓 Open governance**: economic parameters are community decisions, not
   developer decisions
 
@@ -129,7 +131,10 @@ See [INSTALL.md](INSTALL.md) for platform-specific build instructions.
    sized and whether a burn path exists are open design questions
    ([#6](https://github.com/cno127/o-blockchain/issues/6),
    [#7](https://github.com/cno127/o-blockchain/issues/7)).
-4. **Proof of personhood**: BrightID keeps it one person = one identity.
+4. **Proof of personhood**: one person = one identity, enforced through
+   endorsement-based user verification supporting several methods (government
+   ID, video call, document review, biometrics, third-party KYC such as
+   BrightID).
 5. **Universal Basic Income** remains a **long-term vision** contingent on the
    above being proven correct; amounts would be community-governed.
 
@@ -139,7 +144,9 @@ See [INSTALL.md](INSTALL.md) for platform-specific build instructions.
 - **Consensus**: hybrid PoW / PoB (proof-of-personhood-weighted), under
   active design
 - **Model**: multi-currency UTXO
-- **Identity**: BrightID integration
+- **Identity**: endorsement-based proof of personhood with pluggable
+  verification methods (government ID, video call, document review,
+  biometrics, third-party KYC incl. BrightID)
 - **Volume accounting**: L1 on-chain output value per currency only — no
   L2-reported volume in any consensus formula (decided; see
   [#7](https://github.com/cno127/o-blockchain/issues/7))
@@ -218,8 +225,10 @@ in practice is exactly what the monetary simulation work
 ([#12](https://github.com/cno127/o-blockchain/issues/12)) is meant to test.
 
 **Q: How do you prevent fake accounts?**
-A: BrightID proof-of-personhood: one person = one identity via decentralized
-social-graph verification.
+A: Proof of personhood: one person = one identity. Several verification
+methods are accepted — government ID, video call, document review,
+biometrics, and third-party KYC providers such as BrightID (decentralized
+social-graph verification).
 
 More on the [Wiki FAQ](https://github.com/cno127/o-blockchain/wiki/FAQ).
 
@@ -230,7 +239,7 @@ MIT — see [COPYING](COPYING).
 ## 🙏 Acknowledgments
 
 - **Bitcoin Core** for the foundation
-- **BrightID** for decentralized identity
+- **BrightID** and other identity providers for proof of personhood
 - **Contributors** — including the ones we hope this README brings in
 
 ---
