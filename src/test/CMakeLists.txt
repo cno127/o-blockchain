@@ -131,6 +131,7 @@ add_executable(test_bitcoin
   user_consensus_tests.cpp
   o_pow_pob_tests.cpp
   o_reward_tests.cpp
+  o_transactions_envelope_tests.cpp
 )
 
 include(TargetDataSources)

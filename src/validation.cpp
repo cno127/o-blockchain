@@ -2748,10 +2748,24 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
                   static_cast<int>(stab_txs.size()), pindex->nHeight);
     }
     
-    // O Blockchain: Validate stabilization consensus
+    // O Blockchain: Validate stabilization consensus.
+    // Do NOT return early here (#17): background script checks queued via
+    // `control` (control->Add above) hold raw pointers into `txsdata`, and
+    // `control` is constructed before `txsdata`, so returning before
+    // control->Complete() destroys txsdata while worker threads may still be
+    // reading it — the CVE-2024-52911 use-after-free pattern (fixed upstream
+    // in v29, bitcoin/bitcoin#31112). On failure the validator has already set
+    // `state`; the unified !state.IsValid() reject below runs after Complete(),
+    // exactly like every other failure inside the transaction loop.
     if (!OConsensus::g_stabilization_consensus_validator.ValidateStabilizationTransactions(block, pindex->nHeight, state)) {
-        LogPrintf("O Stabilization: Consensus validation failed at height %d\n", pindex->nHeight);
-        return false;
+        if (state.IsValid()) {
+            // Defensive: uphold the "returned false => state is invalid"
+            // contract even if a future validator path forgets to set state.
+            state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-o-stabilization",
+                          "stabilization consensus validation failed without state");
+        }
+        LogPrintf("O Stabilization: Consensus validation failed at height %d: %s\n",
+                  pindex->nHeight, state.ToString());
     }
 
     CAmount blockReward = nFees + GetBlockSubsidy(pindex->nHeight, params.GetConsensus());

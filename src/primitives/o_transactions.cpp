@@ -70,8 +70,11 @@ CScript CUserVerificationData::ToScript() const {
     CScript script;
     script << OP_RETURN;
     script << O_TX_PREFIX;
-    script << O_TX_VERSION;
-    script << static_cast<uint8_t>(OTxType::USER_VERIFY);
+    // Version and type MUST be 1-byte data pushes: for small integers,
+    // `script << int` emits opcodes (OP_1..OP_16), which every FromScript /
+    // GetOTxType parser rejects (vch.size() != 1). See issue #18.
+    script << std::vector<unsigned char>{O_TX_VERSION};
+    script << std::vector<unsigned char>{static_cast<unsigned char>(OTxType::USER_VERIFY)};
     script << data;
     
     return script;
@@ -174,8 +177,9 @@ CScript CWaterPriceMeasurementData::ToScript() const {
     CScript script;
     script << OP_RETURN;
     script << O_TX_PREFIX;
-    script << O_TX_VERSION;
-    script << static_cast<uint8_t>(OTxType::WATER_PRICE);
+    // 1-byte data pushes, not opcodes (#18).
+    script << std::vector<unsigned char>{O_TX_VERSION};
+    script << std::vector<unsigned char>{static_cast<unsigned char>(OTxType::WATER_PRICE)};
     script << data;
     
     return script;
@@ -274,8 +278,9 @@ CScript CExchangeRateMeasurementData::ToScript() const {
     CScript script;
     script << OP_RETURN;
     script << O_TX_PREFIX;
-    script << O_TX_VERSION;
-    script << static_cast<uint8_t>(OTxType::EXCHANGE_RATE);
+    // 1-byte data pushes, not opcodes (#18).
+    script << std::vector<unsigned char>{O_TX_VERSION};
+    script << std::vector<unsigned char>{static_cast<unsigned char>(OTxType::EXCHANGE_RATE)};
     script << data;
     
     return script;
@@ -463,11 +468,14 @@ CScript CMeasurementValidationData::ToScript() const {
     
     std::vector<unsigned char> data(UCharCast(ds.data()), UCharCast(ds.data() + ds.size()));
     
-    // Build OP_RETURN script: OP_RETURN <O_TX_PREFIX> <MEASUREMENT_VALIDATION> <serialized data>
+    // Build OP_RETURN script: OP_RETURN <O_TX_PREFIX> <VERSION> <MEASUREMENT_VALIDATION> <serialized data>
     CScript script;
     script << OP_RETURN;
     script << std::vector<unsigned char>(O_TX_PREFIX.begin(), O_TX_PREFIX.end());
-    script << static_cast<uint8_t>(OTxType::MEASUREMENT_VALIDATION);
+    // 1-byte data pushes, not opcodes; version byte added so all O envelope
+    // types share the same format (#18).
+    script << std::vector<unsigned char>{O_TX_VERSION};
+    script << std::vector<unsigned char>{static_cast<unsigned char>(OTxType::MEASUREMENT_VALIDATION)};
     script << data;
     
     return script;
@@ -489,6 +497,11 @@ bool CMeasurementValidationData::FromScript(const CScript& script, CMeasurementV
     }
     if (vch.size() != O_TX_PREFIX.size() || 
         !std::equal(vch.begin(), vch.end(), O_TX_PREFIX.begin())) {
+        return false;
+    }
+    
+    // Check version byte (unified envelope: OP_RETURN <prefix> <version> <type> <data>)
+    if (!script.GetOp(pc, opcode, vch) || vch.size() != 1 || vch[0] != O_TX_VERSION) {
         return false;
     }
     
@@ -566,11 +579,14 @@ CScript CMeasurementInviteData::ToScript() const {
     
     std::vector<unsigned char> data(UCharCast(ds.data()), UCharCast(ds.data() + ds.size()));
     
-    // Build OP_RETURN script: OP_RETURN <O_TX_PREFIX> <MEASUREMENT_INVITE> <serialized data>
+    // Build OP_RETURN script: OP_RETURN <O_TX_PREFIX> <VERSION> <MEASUREMENT_INVITE> <serialized data>
     CScript script;
     script << OP_RETURN;
     script << std::vector<unsigned char>(O_TX_PREFIX.begin(), O_TX_PREFIX.end());
-    script << static_cast<uint8_t>(OTxType::MEASUREMENT_INVITE);
+    // 1-byte data pushes, not opcodes; version byte added so all O envelope
+    // types share the same format (#18).
+    script << std::vector<unsigned char>{O_TX_VERSION};
+    script << std::vector<unsigned char>{static_cast<unsigned char>(OTxType::MEASUREMENT_INVITE)};
     script << data;
     
     return script;
@@ -592,6 +608,11 @@ bool CMeasurementInviteData::FromScript(const CScript& script, CMeasurementInvit
     }
     if (vch.size() != O_TX_PREFIX.size() || 
         !std::equal(vch.begin(), vch.end(), O_TX_PREFIX.begin())) {
+        return false;
+    }
+    
+    // Check version byte (unified envelope: OP_RETURN <prefix> <version> <type> <data>)
+    if (!script.GetOp(pc, opcode, vch) || vch.size() != 1 || vch[0] != O_TX_VERSION) {
         return false;
     }
     
