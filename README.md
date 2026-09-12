@@ -2,6 +2,7 @@
 
 > A water-price-based stablecoin system — **early-stage prototype, looking for contributors**
 
+[![CI](https://github.com/cno127/o-blockchain/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/cno127/o-blockchain/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](COPYING)
 [![Status](https://img.shields.io/badge/status-prototype-yellow.svg)]()
 [![Wiki](https://img.shields.io/badge/docs-wiki-blue.svg)](https://github.com/cno127/o-blockchain/wiki)
@@ -58,7 +59,8 @@ branch; a full spec-conformance audit lives at
 
 ### What works today
 
-- Builds on Linux via CMake (CI runs on every push)
+- Builds on Linux via CMake; CI (`.github/workflows/ci.yml`) builds `main`,
+  runs the unit-test suites and the O regtest functional tests on every PR
 - Multi-currency UTXO data structures and O-specific transaction types
   (user verification, water price, exchange rate, validation, invitations)
 - Measurement submission → validation → statistical averaging → stability
@@ -186,8 +188,8 @@ git checkout -b feature/your-feature-name
 git push origin feature/your-feature-name
 ```
 
-CI builds run automatically on every push — check the Actions tab before
-requesting review. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+CI runs automatically on every pull request (Linux build + unit tests + O
+functional tests) — check the Actions tab before requesting review. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## 📞 Community
 
