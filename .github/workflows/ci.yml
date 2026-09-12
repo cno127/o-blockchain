@@ -97,7 +97,10 @@ jobs:
       - name: Build
         run: |
           ccache --zero-stats
-          cmake --build "$BUILD_DIR" -j "$(nproc)"
+          # -k 0: keep going after the first failure so ONE run surfaces every
+          # compile error in the tree (main has not been built by CI since
+          # Oct 2025). Link errors still only appear once everything compiles.
+          cmake --build "$BUILD_DIR" -j "$(nproc)" -- -k 0
           echo "--- ccache ---"
           ccache --show-stats
 
