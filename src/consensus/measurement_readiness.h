@@ -4,6 +4,7 @@
 #include <string>
 #include <map>
 #include <optional>
+#include <vector>
 #include <sync.h>
 #include <consensus/amount.h>
 

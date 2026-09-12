@@ -89,6 +89,10 @@ EXTENDED_SCRIPTS = [
 BASE_SCRIPTS = [
     # Scripts that are run by default.
     # Longest test should go first, to favor running tests in parallel
+    # O Blockchain functional tests (regtest). Kept at the top so they are
+    # easy to find; both run in well under a minute.
+    'feature_o_blockchain_sync.py',
+    'feature_o_databases.py',
     # vv Tests less than 5m vv
     'feature_fee_estimation.py',
     'feature_taproot.py',
