@@ -15,7 +15,7 @@ BOOST_FIXTURE_TEST_SUITE(o_brightid_db_tests, BasicTestingSetup)
 BOOST_AUTO_TEST_CASE(brightid_db_basic_write_read)
 {
     // Create temporary database
-    auto db = std::make_unique<CBrightIDUserDB>(1 << 20, true, false); // 1MB cache, memory-only
+    auto db = std::make_unique<CIdentityUserDB>(1 << 20, true, false); // 1MB cache, memory-only
     
     // Create test user
     BrightIDUser user;
@@ -48,7 +48,7 @@ BOOST_AUTO_TEST_CASE(brightid_db_basic_write_read)
 BOOST_AUTO_TEST_CASE(brightid_db_double_serialization)
 {
     // Test double precision serialization/deserialization
-    auto db = std::make_unique<CBrightIDUserDB>(1 << 20, true, false);
+    auto db = std::make_unique<CIdentityUserDB>(1 << 20, true, false);
     
     // Test various double values
     std::vector<double> test_values = {
@@ -79,7 +79,7 @@ BOOST_AUTO_TEST_CASE(brightid_db_double_serialization)
 
 BOOST_AUTO_TEST_CASE(brightid_db_address_linking)
 {
-    auto db = std::make_unique<CBrightIDUserDB>(1 << 20, true, false);
+    auto db = std::make_unique<CIdentityUserDB>(1 << 20, true, false);
     
     // First create a verified user
     BrightIDUser user;
@@ -110,7 +110,7 @@ BOOST_AUTO_TEST_CASE(brightid_db_address_linking)
 
 BOOST_AUTO_TEST_CASE(brightid_db_anonymous_reputation)
 {
-    auto db = std::make_unique<CBrightIDUserDB>(1 << 20, true, false);
+    auto db = std::make_unique<CIdentityUserDB>(1 << 20, true, false);
     
     // Write anonymous reputation
     BOOST_CHECK(db->WriteAnonymousReputation("anon_id_123", 0.75));
@@ -138,7 +138,7 @@ BOOST_AUTO_TEST_CASE(brightid_db_anonymous_reputation)
 
 BOOST_AUTO_TEST_CASE(brightid_db_user_status_update)
 {
-    auto db = std::make_unique<CBrightIDUserDB>(1 << 20, true, false);
+    auto db = std::make_unique<CIdentityUserDB>(1 << 20, true, false);
     
     // Create user
     BrightIDUser user;
@@ -157,7 +157,7 @@ BOOST_AUTO_TEST_CASE(brightid_db_user_status_update)
 
 BOOST_AUTO_TEST_CASE(brightid_db_trust_score_update)
 {
-    auto db = std::make_unique<CBrightIDUserDB>(1 << 20, true, false);
+    auto db = std::make_unique<CIdentityUserDB>(1 << 20, true, false);
     
     BrightIDUser user;
     user.brightid_address = "test_user";
@@ -175,7 +175,7 @@ BOOST_AUTO_TEST_CASE(brightid_db_trust_score_update)
 
 BOOST_AUTO_TEST_CASE(brightid_db_batch_operations)
 {
-    auto db = std::make_unique<CBrightIDUserDB>(1 << 20, true, false);
+    auto db = std::make_unique<CIdentityUserDB>(1 << 20, true, false);
     
     // Create batch of users
     std::vector<std::pair<std::string, BrightIDUser>> batch;
@@ -201,7 +201,7 @@ BOOST_AUTO_TEST_CASE(brightid_db_batch_operations)
 
 BOOST_AUTO_TEST_CASE(brightid_db_has_user)
 {
-    auto db = std::make_unique<CBrightIDUserDB>(1 << 20, true, false);
+    auto db = std::make_unique<CIdentityUserDB>(1 << 20, true, false);
     
     // Non-existent user
     BOOST_CHECK(!db->HasUser("nonexistent"));
@@ -217,7 +217,7 @@ BOOST_AUTO_TEST_CASE(brightid_db_has_user)
 
 BOOST_AUTO_TEST_CASE(brightid_db_erase_user)
 {
-    auto db = std::make_unique<CBrightIDUserDB>(1 << 20, true, false);
+    auto db = std::make_unique<CIdentityUserDB>(1 << 20, true, false);
     
     // Create user
     BrightIDUser user;
@@ -236,7 +236,7 @@ BOOST_AUTO_TEST_CASE(brightid_db_erase_user)
 
 BOOST_AUTO_TEST_CASE(brightid_db_get_verified_users)
 {
-    auto db = std::make_unique<CBrightIDUserDB>(1 << 20, true, false);
+    auto db = std::make_unique<CIdentityUserDB>(1 << 20, true, false);
     
     // Create mix of users
     for (int i = 0; i < 10; i++) {
@@ -258,7 +258,7 @@ BOOST_AUTO_TEST_CASE(brightid_db_get_verified_users)
 
 BOOST_AUTO_TEST_CASE(brightid_db_edge_cases)
 {
-    auto db = std::make_unique<CBrightIDUserDB>(1 << 20, true, false);
+    auto db = std::make_unique<CIdentityUserDB>(1 << 20, true, false);
     
     // Test empty strings
     BrightIDUser user;
@@ -283,7 +283,7 @@ BOOST_AUTO_TEST_CASE(brightid_db_edge_cases)
 
 BOOST_AUTO_TEST_CASE(brightid_db_concurrent_write_read)
 {
-    auto db = std::make_unique<CBrightIDUserDB>(1 << 20, true, false);
+    auto db = std::make_unique<CIdentityUserDB>(1 << 20, true, false);
     
     // Write many users rapidly (simulates concurrent access)
     for (int i = 0; i < 1000; i++) {

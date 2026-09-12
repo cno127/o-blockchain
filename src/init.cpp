@@ -1756,7 +1756,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
                   measurement_cache * (1.0 / 1024 / 1024));
         
         // Initialize BrightID User Database (Proof of Personhood)
-        OConsensus::g_brightid_db = std::make_unique<OConsensus::CBrightIDUserDB>(
+        OConsensus::g_brightid_db = std::make_unique<OConsensus::CIdentityUserDB>(
             brightid_cache,
             false,  // Not memory-only
             do_reindex  // Wipe if reindexing
