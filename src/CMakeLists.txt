@@ -149,6 +149,17 @@ if(WITH_ZMQ)
   add_subdirectory(zmq)
 endif()
 
+# O Layer 2 prototype: the shared multi-currency payment state (test value only).
+# Linked into the unit tests alone, not into any node binary.
+add_library(o_layer2 STATIC EXCLUDE_FROM_ALL
+  o_layer2/payment_state.cpp
+)
+target_link_libraries(o_layer2
+  PRIVATE
+    core_interface
+    bitcoin_crypto
+)
+
 # Home for common functionality shared by different executables and libraries.
 # Similar to `bitcoin_util` library, but higher-level.
 add_library(bitcoin_common STATIC EXCLUDE_FROM_ALL
