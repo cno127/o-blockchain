@@ -131,6 +131,7 @@ add_executable(test_bitcoin
   user_consensus_tests.cpp
   o_pow_pob_tests.cpp
   o_reward_tests.cpp
+  o_layer2_tests.cpp
 )
 
 include(TargetDataSources)
@@ -157,6 +158,7 @@ target_link_libraries(test_bitcoin
   bitcoin_cli
   bitcoin_node
   bitcoin_consensus
+  o_layer2
   minisketch
   secp256k1
   Boost::headers
